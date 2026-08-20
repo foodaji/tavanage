@@ -1,0 +1,1857 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>سامانه صدور فاکتور</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --ink:#1B2A4A;
+    --ink-soft:#4A5A7A;
+    --firouzeh:#17A398;
+    --firouzeh-dark:#0E7A70;
+    --anar:#E8553B;
+    --zafaran:#F2A93B;
+    --paper:#FFFDF9;
+    --cloud:#F3F0E8;
+    --line:#E5E0D3;
+    --accent:#17A398;
+    --accent-dark:#0E7A70;
+    --accent-rgb:23,163,152;
+    --shadow:0 10px 30px rgba(27,42,74,.08);
+    --shadow-lg:0 20px 50px rgba(27,42,74,.16);
+    --radius:18px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Vazirmatn','Tahoma','Segoe UI',sans-serif;
+    background:
+      radial-gradient(circle at 8% 8%, rgba(23,163,152,.10), transparent 40%),
+      radial-gradient(circle at 95% 15%, rgba(242,169,59,.12), transparent 45%),
+      radial-gradient(circle at 50% 100%, rgba(232,85,59,.06), transparent 40%),
+      var(--cloud);
+    color:var(--ink);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{margin:0;}
+  input,select,textarea,button{font-family:inherit;}
+  ::selection{background:var(--accent);color:#fff;}
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:40;
+    background:linear-gradient(120deg,var(--ink) 0%,#233a63 60%, #1c3155 100%);
+    color:#fff;
+    padding:16px 24px;
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+    box-shadow:0 6px 24px rgba(27,42,74,.25);
+    flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand .mark{
+    width:42px;height:42px;border-radius:12px;
+    background:linear-gradient(135deg,var(--firouzeh),var(--zafaran));
+    display:flex;align-items:center;justify-content:center;font-size:22px;
+    box-shadow:0 6px 16px rgba(23,163,152,.4);
+    animation:markFloat 4s ease-in-out infinite;
+  }
+  @keyframes markFloat{0%,100%{transform:translateY(0) rotate(0deg);}50%{transform:translateY(-4px) rotate(-4deg);}}
+  .brand h1{font-size:18px;font-weight:800;}
+  .brand p{margin:0;font-size:12px;color:#c9d3e6;}
+
+  .topbar-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+
+  .doctype-toggle{
+    display:flex;background:rgba(255,255,255,.1);border-radius:999px;padding:4px;gap:2px;
+  }
+  .doctype-toggle button{
+    border:none;background:transparent;color:#dbe3f2;padding:9px 18px;border-radius:999px;
+    font-size:13px;font-weight:700;cursor:pointer;transition:.25s;
+  }
+  .doctype-toggle button.active{
+    background:#fff;color:var(--ink);box-shadow:0 4px 12px rgba(0,0,0,.2);
+  }
+
+  .theme-picker{display:flex;align-items:center;gap:8px;}
+  .theme-picker span{font-size:12px;color:#c9d3e6;}
+  .swatch{
+    width:24px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,.6);cursor:pointer;
+    transition:transform .2s; padding:0;
+  }
+  .swatch:hover{transform:scale(1.15);}
+  .swatch.active{outline:2px solid #fff;outline-offset:2px;}
+
+  .settings-btn{
+    border:1.5px solid rgba(255,255,255,.35);background:rgba(255,255,255,.08);color:#fff;
+    padding:9px 14px;border-radius:999px;font-size:12.5px;font-weight:700;cursor:pointer;
+    display:flex;align-items:center;gap:6px;transition:.2s;white-space:nowrap;
+  }
+  .settings-btn:hover{background:rgba(255,255,255,.18);}
+
+  /* ---------- layout ---------- */
+  .layout{
+    display:grid;grid-template-columns:420px 1fr;gap:28px;
+    max-width:1400px;margin:0 auto;padding:28px 24px 110px;
+    align-items:start;
+  }
+  @media (max-width:980px){
+    .layout{grid-template-columns:1fr;padding-bottom:110px;}
+  }
+
+  /* ---------- panel / accordion (shared by form + settings) ---------- */
+  .panel{
+    background:var(--paper);border-radius:var(--radius);box-shadow:var(--shadow);
+    border:1px solid var(--line);overflow:hidden;
+  }
+  .accordion-section{border-bottom:1px solid var(--line);}
+  .accordion-section:last-child{border-bottom:none;}
+  .accordion-head{
+    display:flex;align-items:center;gap:10px;padding:16px 18px;cursor:pointer;user-select:none;
+    font-weight:700;font-size:14.5px;
+  }
+  .accordion-head .icon{font-size:18px;}
+  .accordion-head .chev{margin-inline-start:auto;transition:transform .25s;color:var(--ink-soft);}
+  .accordion-section.open .chev{transform:rotate(180deg);}
+  .accordion-body{
+    max-height:0;overflow:hidden;transition:max-height .35s ease;
+    padding:0 18px;
+  }
+  .accordion-section.open .accordion-body{max-height:2400px;padding:0 18px 18px;}
+
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:12.5px;color:var(--ink-soft);margin-bottom:5px;font-weight:600;}
+  .field input[type=text],.field input[type=tel],.field input[type=number],.field input[type=date],.field textarea,.field select{
+    width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;
+    font-size:13.5px;background:#fff;color:var(--ink);transition:.2s;
+  }
+  .field input:focus,.field textarea:focus,.field select:focus{
+    outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.18);
+  }
+  .field textarea{resize:vertical;min-height:60px;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .hint{font-size:11px;color:#9aa4b8;margin-top:4px;line-height:1.7;}
+
+  .upload-zone{
+    border:2px dashed var(--line);border-radius:14px;padding:14px;text-align:center;
+    cursor:pointer;transition:.2s;background:#fdfcf8;position:relative;display:block;
+  }
+  .upload-zone:hover{border-color:var(--accent);background:rgba(var(--accent-rgb),.06);}
+  .upload-zone.has-image{padding:10px;}
+  .upload-zone input[type=file]{display:none;}
+  .upload-zone .uz-empty{font-size:12.5px;color:var(--ink-soft);}
+  .upload-zone .uz-empty .big{font-size:26px;display:block;margin-bottom:4px;}
+  .upload-zone img{max-height:70px;max-width:100%;border-radius:8px;object-fit:contain;}
+  .remove-img{
+    position:absolute;top:6px;left:6px;background:var(--anar);color:#fff;border:none;
+    width:22px;height:22px;border-radius:50%;font-size:12px;cursor:pointer;line-height:1;
+  }
+  .upload-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+  @media (max-width:520px){.upload-grid{grid-template-columns:1fr;}}
+  .upload-grid .field label{text-align:center;}
+
+  .items-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  .items-table th{
+    background:var(--cloud);padding:8px 6px;font-weight:700;color:var(--ink-soft);
+    font-size:11.5px;text-align:center;
+  }
+  .items-table td{padding:6px 4px;border-bottom:1px solid var(--line);}
+  .items-table input{
+    width:100%;border:1px solid var(--line);border-radius:7px;padding:6px 6px;font-size:12.5px;text-align:center;
+  }
+  .items-table input.desc{text-align:right;}
+  .items-table .line-total{font-weight:700;font-size:12px;white-space:nowrap;text-align:center;}
+  .del-row{background:none;border:none;color:var(--anar);cursor:pointer;font-size:15px;}
+  .add-row-btn{
+    margin-top:10px;width:100%;padding:9px;border:1.5px dashed var(--accent);background:none;
+    color:var(--accent-dark);border-radius:10px;font-weight:700;font-size:12.5px;cursor:pointer;transition:.2s;
+  }
+  .add-row-btn:hover{background:rgba(var(--accent-rgb),.08);}
+
+  .toggle-pair{display:flex;gap:8px;margin-bottom:12px;}
+  .toggle-pair button{
+    flex:1;padding:9px;border-radius:10px;border:1.5px solid var(--line);background:#fff;
+    font-size:12.5px;font-weight:700;color:var(--ink-soft);cursor:pointer;transition:.2s;
+  }
+  .toggle-pair button.active{border-color:var(--accent);background:rgba(var(--accent-rgb),.12);color:var(--accent-dark);}
+
+  .checkline{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;margin-bottom:10px;color:var(--ink-soft);}
+  .checkline input{width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;}
+
+  .confirm-btn{
+    width:100%;padding:13px;border:none;border-radius:12px;
+    background:linear-gradient(120deg,var(--anar),#c93f28);color:#fff;font-weight:800;font-size:14px;
+    cursor:pointer;box-shadow:0 8px 20px rgba(232,85,59,.35);transition:transform .15s;
+  }
+  .confirm-btn:hover{transform:translateY(-2px);}
+  .confirm-btn:active{transform:scale(.97);}
+  .confirm-btn.locked{background:linear-gradient(120deg,#8a9bb5,#6f8099);box-shadow:none;cursor:default;}
+
+  .clear-link{
+    display:block;text-align:center;margin-top:10px;font-size:12px;color:var(--ink-soft);
+    background:none;border:none;cursor:pointer;text-decoration:underline;width:100%;
+  }
+
+  .link-btn{
+    background:none;border:none;color:var(--accent-dark);font-weight:700;font-size:12px;
+    cursor:pointer;text-decoration:underline;padding:4px 0;
+  }
+
+  /* ---------- shop summary (read-only + toggles) ---------- */
+  .ro-item{
+    display:flex;align-items:center;gap:9px;padding:8px 10px;background:var(--cloud);
+    border-radius:10px;margin-bottom:8px;font-size:12.5px;
+  }
+  .ro-item input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;}
+  .ro-item .ro-thumb{width:28px;height:28px;border-radius:7px;object-fit:contain;background:#fff;border:1px solid var(--line);flex-shrink:0;}
+  .ro-item .ro-text{flex:1;}
+  .ro-item .ro-text b{display:block;font-size:13px;font-weight:700;}
+  .ro-item .ro-text small{color:var(--ink-soft);font-size:11px;}
+  .ro-empty{color:#b3aa9a;font-style:normal;}
+
+  /* ---------- payment checklist (main form) ---------- */
+  .pay-check-item{
+    display:flex;align-items:center;gap:9px;padding:9px 10px;border:1.5px solid var(--line);
+    border-radius:10px;margin-bottom:8px;font-size:12.5px;cursor:pointer;transition:.2s;
+  }
+  .pay-check-item:hover{border-color:var(--accent);}
+  .pay-check-item input{width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;}
+  .pay-check-item .pc-text b{display:block;font-size:12.5px;}
+  .pay-check-item .pc-text span{color:var(--ink-soft);font-size:11px;}
+  .empty-note{
+    font-size:12px;color:var(--ink-soft);background:var(--cloud);padding:12px;border-radius:10px;text-align:center;
+  }
+
+  /* ---------- settings: saved payment methods manager ---------- */
+  .pm-list-item{
+    display:flex;align-items:center;gap:8px;padding:9px 10px;background:var(--cloud);
+    border-radius:10px;margin-bottom:8px;font-size:12px;
+  }
+  .pm-list-item .pm-text{flex:1;}
+  .pm-list-item .pm-text b{display:block;font-size:12.5px;}
+  .pm-list-item .pm-text span{color:var(--ink-soft);font-size:11px;}
+  .pm-del{background:none;border:none;color:var(--anar);font-size:16px;cursor:pointer;}
+  .pm-add-btn{
+    width:100%;padding:10px;border:none;border-radius:10px;background:var(--ink);color:#fff;
+    font-weight:700;font-size:12.5px;cursor:pointer;margin-top:4px;
+  }
+
+  /* ---------- template picker ---------- */
+  .tpl-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+  .tpl-card{
+    display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 8px;
+    border:2px solid var(--line);border-radius:12px;background:#fff;cursor:pointer;
+    font-size:12px;font-weight:700;color:var(--ink-soft);transition:.2s;
+  }
+  .tpl-card:hover{border-color:rgba(var(--accent-rgb),.5);}
+  .tpl-card.active{border-color:var(--accent);color:var(--accent-dark);background:rgba(var(--accent-rgb),.06);}
+  .tpl-swatch{width:100%;height:38px;border-radius:7px;display:block;}
+  .tpl-swatch-classic{background:linear-gradient(180deg,var(--accent) 0 22%, #fff 22%);border:1px solid var(--line);}
+  .tpl-swatch-minimal{background:#fff;border:1.5px solid var(--ink);position:relative;}
+  .tpl-swatch-minimal::after{content:'';position:absolute;left:6px;right:6px;top:8px;height:2px;background:var(--ink);}
+  .tpl-swatch-bold{background:linear-gradient(180deg,var(--accent) 0 55%, #fff 55%);}
+  .tpl-swatch-formal{background:#fff;border:2px solid var(--ink);border-radius:3px;}
+
+  /* ---------- history cards ---------- */
+  .history-card{
+    display:flex;flex-direction:column;gap:8px;padding:12px;background:var(--cloud);
+    border-radius:12px;margin-bottom:10px;font-size:12px;
+  }
+  .history-top{display:flex;justify-content:space-between;width:100%;gap:8px;flex-wrap:wrap;}
+  .history-top .ht-text b{display:block;font-size:13px;}
+  .history-top .ht-text span{color:var(--ink-soft);font-size:11px;}
+  .history-total{font-weight:800;color:var(--ink);white-space:nowrap;}
+  .history-bottom{display:flex;justify-content:space-between;align-items:center;width:100%;flex-wrap:wrap;gap:8px;}
+  .status-pill{font-size:10.5px;font-weight:800;padding:4px 10px;border-radius:999px;}
+  .status-settled{background:rgba(23,163,152,.15);color:var(--firouzeh-dark);}
+  .status-unpaid{background:rgba(232,85,59,.13);color:var(--anar);}
+  .history-actions{display:flex;gap:10px;flex-wrap:wrap;}
+
+  /* ---------- preview ---------- */
+  .preview-wrap{position:sticky;top:100px;}
+  #invoice-preview{
+    background:#fff;border-radius:16px;box-shadow:var(--shadow-lg);
+    padding:24px 28px;position:relative;overflow:hidden;
+    animation:fadeInUp .6s ease both;
+    border-top:8px solid var(--accent);
+    max-width:794px;margin:0 auto;
+  }
+  #invoice-preview.export-mode, #invoice-preview.export-mode *{
+    box-shadow:none !important;animation:none !important;
+  }
+  #invoice-preview.export-mode{
+    width:794px !important;max-width:794px !important;flex:none !important;
+  }
+  @keyframes fadeInUp{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
+
+  .watermark{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    pointer-events:none;transform:rotate(-28deg);font-size:80px;font-weight:900;
+    color:rgba(27,42,74,.05);white-space:nowrap;
+  }
+
+  .inv-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;position:relative;z-index:1;}
+  .inv-head .shop-block{display:flex;gap:10px;align-items:center;}
+  .inv-head .logo-box{
+    width:46px;height:46px;border-radius:10px;background:var(--cloud);display:flex;align-items:center;justify-content:center;
+    overflow:hidden;flex-shrink:0;border:1px solid var(--line);
+  }
+  .inv-head .logo-box img{width:100%;height:100%;object-fit:contain;}
+  .inv-head .logo-box .ph{font-size:18px;color:var(--ink-soft);}
+  .shop-name{font-size:15.5px;font-weight:800;color:var(--ink);}
+  .shop-meta{font-size:10px;color:var(--ink-soft);margin-top:2px;line-height:1.5;}
+
+  .badge{
+    background:var(--accent);color:#fff;padding:5px 12px;border-radius:999px;font-size:11px;font-weight:800;
+    box-shadow:0 4px 10px rgba(var(--accent-rgb),.45);
+    animation:badgeFloat 3.5s ease-in-out infinite;white-space:nowrap;
+  }
+  @keyframes badgeFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-3px);}}
+
+  .inv-meta-row{
+    display:flex;justify-content:space-between;margin-top:10px;padding:8px 12px;
+    background:var(--cloud);border-radius:9px;font-size:10.5px;flex-wrap:wrap;gap:8px;position:relative;z-index:1;
+  }
+  .inv-meta-row div b{display:block;color:var(--ink-soft);font-weight:600;font-size:9.5px;margin-bottom:1px;}
+  .inv-meta-row div span{font-weight:800;color:var(--ink);font-size:11.5px;}
+
+  .cust-block{margin-top:8px;padding:8px 12px;border:1.5px dashed var(--line);border-radius:9px;position:relative;z-index:1;}
+  .cust-block b{font-size:9.5px;color:var(--accent-dark);display:block;margin-bottom:2px;}
+  .cust-block .cname{font-size:12.5px;font-weight:800;}
+  .cust-block .cmeta{font-size:10px;color:var(--ink-soft);margin-top:1px;line-height:1.5;}
+
+  /* ---------- items card (dominant element — most page space goes here) ---------- */
+  .items-card{
+    margin-top:10px;position:relative;z-index:1;
+    border:1.5px solid rgba(var(--accent-rgb),.35);border-radius:10px;overflow:hidden;
+    box-shadow:0 4px 12px rgba(var(--accent-rgb),.1);
+  }
+  table.inv-items{width:100%;border-collapse:collapse;font-size:11.5px;}
+  table.inv-items thead th{
+    background:linear-gradient(120deg,var(--accent),var(--accent-dark));color:#fff;
+    padding:7px 8px;font-size:10.5px;font-weight:800;
+  }
+  table.inv-items tbody td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:center;font-weight:600;}
+  table.inv-items tbody td.desc-cell{text-align:right;font-weight:800;color:var(--ink);}
+  table.inv-items tbody tr:nth-child(even){background:rgba(var(--accent-rgb),.06);}
+  table.inv-items tbody tr:last-child td{border-bottom:none;}
+
+  .totals-block{margin-top:4px;padding-top:8px;position:relative;z-index:1;}
+  .totals-line{display:flex;justify-content:space-between;font-size:11px;padding:2px 4px;color:var(--ink-soft);}
+  .totals-line.grand{
+    margin-top:5px;padding:8px 10px;background:linear-gradient(120deg, var(--accent), var(--accent-dark));
+    color:#fff;border-radius:9px;font-size:13.5px;font-weight:800;
+  }
+  .amount-words{
+    margin-top:5px;font-size:10px;color:var(--ink-soft);background:var(--cloud);
+    padding:6px 10px;border-radius:8px;
+  }
+
+  .pay-sign-row{display:flex;justify-content:space-between;gap:14px;margin-top:10px;position:relative;z-index:1;flex-wrap:wrap;}
+  .pay-block{font-size:10.5px;flex:1;min-width:180px;}
+  .pay-block b.pt{display:block;color:var(--accent-dark);font-size:10px;margin-bottom:4px;}
+  .pay-block .pay-line{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px dashed var(--line);}
+  .pay-block .pay-line b{margin:0;color:var(--ink-soft);font-weight:600;font-size:10px;display:inline;}
+  .pay-block .pay-line span{font-weight:800;unicode-bidi:plaintext;}
+  .pay-block .pay-line span.pay-number{letter-spacing:.5px;}
+
+  .sign-block{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:150px;}
+  .sign-stage{position:relative;width:180px;height:118px;}
+  .sign-img{max-width:160px;max-height:82px;position:absolute;bottom:28px;right:8px;z-index:1;}
+  .stamp{
+    position:absolute;bottom:0;left:0;width:96px;height:96px;
+    display:flex;align-items:center;justify-content:center;
+    opacity:0;transform:scale(3.4) rotate(-30deg);z-index:2;pointer-events:none;
+  }
+  .stamp img{width:100%;height:100%;display:block;}
+  .stamp.show{
+    opacity:1;transform:scale(1) rotate(-10deg);
+    animation:stampDown .55s cubic-bezier(.2,1.4,.4,1);
+  }
+  @keyframes stampDown{
+    0%{opacity:0;transform:scale(3.4) rotate(-30deg);}
+    60%{opacity:1;transform:scale(.92) rotate(-9deg);}
+    80%{transform:scale(1.06) rotate(-11deg);}
+    100%{opacity:1;transform:scale(1) rotate(-10deg);}
+  }
+  .sign-caption{font-size:9.5px;color:var(--ink-soft);text-align:center;}
+
+  .inv-footer{
+    margin-top:10px;text-align:center;font-size:9.5px;color:var(--ink-soft);
+    border-top:1px dashed var(--line);padding-top:8px;position:relative;z-index:1;
+  }
+  .notes-box{margin-top:8px;font-size:10px;color:var(--ink-soft);background:var(--cloud);padding:6px 10px;border-radius:8px;position:relative;z-index:1;}
+
+  /* ---------- invoice templates (skins applied to #invoice-preview) ---------- */
+  #invoice-preview.tpl-minimal{border-top:none;box-shadow:0 2px 14px rgba(27,42,74,.07);}
+  #invoice-preview.tpl-minimal .badge{background:none;color:var(--ink);box-shadow:none;animation:none;padding:6px 0;border-radius:0;border-bottom:2px solid var(--accent);}
+  #invoice-preview.tpl-minimal .inv-meta-row{background:none;border:1px solid var(--line);border-radius:6px;}
+  #invoice-preview.tpl-minimal .cust-block{border-radius:6px;}
+  #invoice-preview.tpl-minimal .items-card{border-radius:6px;box-shadow:none;border:1px solid var(--ink);}
+  #invoice-preview.tpl-minimal table.inv-items thead th{background:var(--ink);}
+  #invoice-preview.tpl-minimal .totals-line.grand{border-radius:6px;}
+  #invoice-preview.tpl-minimal .watermark{opacity:.6;}
+  #invoice-preview.tpl-minimal .logo-box{border-radius:6px;}
+
+  #invoice-preview.tpl-bold{border-top:none;}
+  #invoice-preview.tpl-bold .inv-head{
+    background:linear-gradient(120deg,var(--accent),var(--accent-dark));
+    margin:-38px -40px 22px -40px;padding:32px 40px 26px;color:#fff;
+  }
+  #invoice-preview.tpl-bold .shop-name{color:#fff;}
+  #invoice-preview.tpl-bold .shop-meta{color:rgba(255,255,255,.88);}
+  #invoice-preview.tpl-bold .badge{background:rgba(255,255,255,.22);}
+  #invoice-preview.tpl-bold .logo-box{background:#fff;}
+  #invoice-preview.tpl-bold .totals-line.grand{box-shadow:0 8px 20px rgba(var(--accent-rgb),.3);}
+
+  #invoice-preview.tpl-formal{border-top:none;border:2px solid var(--ink);border-radius:6px;}
+  #invoice-preview.tpl-formal .badge{border-radius:6px;animation:none;}
+  #invoice-preview.tpl-formal .inv-meta-row{border-radius:6px;}
+  #invoice-preview.tpl-formal .cust-block{border-radius:6px;border-style:solid;}
+  #invoice-preview.tpl-formal .items-card{border-radius:6px;box-shadow:none;border-color:var(--ink);}
+  #invoice-preview.tpl-formal table.inv-items thead th{background:var(--ink);}
+  #invoice-preview.tpl-formal .totals-line.grand{border-radius:6px;}
+  #invoice-preview.tpl-formal .logo-box{border-radius:6px;}
+  #invoice-preview.tpl-formal .stamp,#invoice-preview.tpl-formal .badge{animation:none;}
+
+  /* ---------- action bar (desktop) ---------- */
+  .action-bar{
+    position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:50;
+    display:flex;gap:8px;background:var(--paper);border:1px solid var(--line);
+    padding:9px;border-radius:999px;box-shadow:var(--shadow-lg);flex-wrap:wrap;justify-content:center;
+    max-width:94vw;transition:.3s;
+  }
+  .action-bar button{
+    border:none;background:var(--ink);color:#fff;padding:11px 16px;border-radius:999px;
+    font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;
+    transition:transform .15s, background .2s;white-space:nowrap;
+  }
+  .action-bar button:hover{transform:translateY(-2px);}
+  .action-bar button:active{transform:scale(.95);}
+  .action-bar button.primary{background:linear-gradient(120deg,var(--accent),var(--accent-dark));}
+
+  .fab-toggle{display:none;}
+
+  @media (max-width:680px){
+    .action-bar{
+      flex-direction:column;bottom:82px;padding:8px;border-radius:16px;
+      transform:translateX(-50%) translateY(12px) scale(.96);
+      opacity:0;pointer-events:none;
+    }
+    .action-bar.expanded{transform:translateX(-50%) translateY(0) scale(1);opacity:1;pointer-events:auto;}
+    .action-bar button{width:56vw;max-width:220px;justify-content:center;}
+    .fab-toggle{
+      display:flex;position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
+      width:54px;height:54px;border-radius:50%;z-index:55;border:none;cursor:pointer;
+      background:linear-gradient(120deg,var(--accent),var(--accent-dark));color:#fff;
+      align-items:center;justify-content:center;font-size:22px;box-shadow:var(--shadow-lg);
+      transition:transform .3s;
+    }
+    .fab-toggle.open{transform:translateX(-50%) rotate(135deg);}
+  }
+
+  /* ---------- toast ---------- */
+  .toast{
+    position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:#fff;padding:12px 22px;border-radius:16px;font-size:12.5px;font-weight:600;
+    box-shadow:var(--shadow-lg);opacity:0;pointer-events:none;transition:.35s;z-index:80;max-width:88vw;text-align:center;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .confetti{position:fixed;top:0;width:8px;height:14px;z-index:70;pointer-events:none;border-radius:2px;}
+
+  /* ---------- modals ---------- */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(27,42,74,.55);z-index:90;
+    display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal-box{
+    background:var(--paper);border-radius:20px;max-width:640px;width:100%;box-shadow:var(--shadow-lg);
+    animation:fadeInUp .35s ease both;margin-bottom:40px;
+  }
+  .modal-head{
+    display:flex;align-items:center;justify-content:space-between;padding:18px 22px;
+    border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--paper);border-radius:20px 20px 0 0;
+  }
+  .modal-head h2{font-size:16px;font-weight:800;}
+  .modal-close{background:var(--cloud);border:none;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:14px;color:var(--ink-soft);}
+  .modal-body{padding:6px 0;}
+  .modal-pad{padding:16px 22px;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001s !important;transition-duration:.001s !important;}
+  }
+
+  @media print{
+    body{background:#fff !important;}
+    .topbar,.panel,.action-bar,.toast,.fab-toggle,.modal-overlay{display:none !important;}
+    .layout{display:block;padding:0;max-width:100%;}
+    .preview-wrap{position:static;}
+    #invoice-preview{box-shadow:none;border-radius:0;padding:14mm;border-top:6px solid var(--accent);max-width:100%;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="mark">🧾</div>
+    <div>
+      <h1>سامانه صدور فاکتور</h1>
+      <p>ساخت، پرینت و ارسال آسان فاکتور فروشگاه شما</p>
+    </div>
+  </div>
+
+  <div class="topbar-actions">
+    <div class="doctype-toggle">
+      <button id="btnInvoice">فاکتور فروش</button>
+      <button id="btnProforma" class="active">پیش‌فاکتور</button>
+    </div>
+    <div class="theme-picker">
+      <span>تم رنگی:</span>
+      <button class="swatch active" data-color="#17A398" data-dark="#0E7A70" data-rgb="23,163,152" style="background:#17A398" title="فیروزه‌ای"></button>
+      <button class="swatch" data-color="#E8553B" data-dark="#c93f28" data-rgb="232,85,59" style="background:#E8553B" title="اناری"></button>
+      <button class="swatch" data-color="#F2A93B" data-dark="#d38f1e" data-rgb="242,169,59" style="background:#F2A93B" title="زعفرانی"></button>
+      <button class="swatch" data-color="#5B6EE1" data-dark="#4152b8" data-rgb="91,110,225" style="background:#5B6EE1" title="بنفش"></button>
+    </div>
+    <button class="settings-btn" id="openHistoryBtn">📜 سوابق</button>
+    <button class="settings-btn" id="openDbBtn">🗄️ دیتابیس</button>
+    <button class="settings-btn" id="openSettingsBtn">⚙️ تنظیمات</button>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- ============ FORM PANEL ============ -->
+  <div class="panel" id="formPanel">
+
+    <div class="accordion-section open">
+      <div class="accordion-head"><span class="icon">🏪</span> اطلاعات فروشگاه <span class="chev">⌄</span></div>
+      <div class="accordion-body">
+        <div id="shopSummary"></div>
+        <button class="link-btn" id="editShopFromForm">ویرایش اطلاعات فروشگاه در تنظیمات ⚙</button>
+      </div>
+    </div>
+
+    <div class="accordion-section open">
+      <div class="accordion-head"><span class="icon">🙋</span> اطلاعات مشتری <span class="chev">⌄</span></div>
+      <div class="accordion-body">
+        <div class="field"><label>نام مشتری</label><input type="text" id="custName" placeholder="نام و نام خانوادگی / نام شرکت"></div>
+        <div class="row2">
+          <div class="field"><label>شماره تماس</label><input type="tel" id="custPhone" placeholder="09xxxxxxxxx"></div>
+          <div class="field"><label>کد پستی (اختیاری)</label><input type="text" id="custPostal" placeholder="کد پستی"></div>
+        </div>
+        <div class="field"><label>آدرس</label><input type="text" id="custAddress" placeholder="آدرس مشتری"></div>
+      </div>
+    </div>
+
+    <div class="accordion-section">
+      <div class="accordion-head"><span class="icon">🗓️</span> مشخصات سند <span class="chev">⌄</span></div>
+      <div class="accordion-body">
+        <div class="row2">
+          <div class="field"><label>شماره فاکتور</label><input type="text" id="invoiceNumber"></div>
+          <div class="field"><label>تاریخ صدور</label><input type="text" id="invoiceDate"></div>
+        </div>
+        <div class="field"><label>تاریخ سررسید (اختیاری)</label><input type="text" id="dueDate" placeholder="مثلاً ۱۵ روز پس از صدور"></div>
+      </div>
+    </div>
+
+    <div class="accordion-section open">
+      <div class="accordion-head"><span class="icon">📦</span> اقلام فاکتور <span class="chev">⌄</span></div>
+      <div class="accordion-body">
+        <table class="items-table">
+          <thead><tr><th style="width:38%">شرح کالا/خدمات</th><th>تعداد</th><th>قیمت واحد</th><th>جمع</th><th></th></tr></thead>
+          <tbody id="itemsBody"></tbody>
+        </table>
+        <button class="add-row-btn" id="addRowBtn">＋ افزودن ردیف جدید</button>
+      </div>
+    </div>
+
+    <div class="accordion-section">
+      <div class="accordion-head"><span class="icon">🏷️</span> تخفیف و مالیات <span class="chev">⌄</span></div>
+      <div class="accordion-body">
+        <div class="toggle-pair">
+          <button class="active" id="discPercentBtn" data-type="percent">تخفیف درصدی</button>
+          <button id="discAmountBtn" data-type="amount">تخفیف مبلغی</button>
+        </div>
+        <div class="field"><label id="discLabel">درصد تخفیف</label><input type="number" id="discountValue" value="0" min="0"></div>
+        <div class="checkline"><input type="checkbox" id="taxEnabled"> <span>اعمال مالیات بر ارزش افزوده</span></div>
+        <div class="field"><label>درصد مالیات</label><input type="number" id="taxPercent" value="9" min="0"></div>
+      </div>
+    </div>
+
+    <div class="accordion-section open">
+      <div class="accordion-head"><span class="icon">💳</span> روش‌های پرداخت <span class="chev">⌄</span></div>
+      <div class="accordion-body">
+        <div id="paymentChecklist"></div>
+        <button class="link-btn" id="editPayFromForm">افزودن یا ویرایش شماره‌ها در تنظیمات ⚙</button>
+      </div>
+    </div>
+
+    <div class="accordion-section">
+      <div class="accordion-head"><span class="icon">📝</span> توضیحات و شرایط <span class="chev">⌄</span></div>
+      <div class="accordion-body">
+        <div class="field"><textarea id="notes" placeholder="مثلاً: کالای فروخته شده تا ۷ روز قابل مرجوعی است."></textarea></div>
+      </div>
+    </div>
+
+    <div class="accordion-section open">
+      <div class="accordion-head"><span class="icon">✅</span> نهایی‌سازی سند <span class="chev">⌄</span></div>
+      <div class="accordion-body">
+        <button class="confirm-btn" id="confirmBtn">✅ تایید و مهر فاکتور</button>
+        <button class="clear-link" id="clearBtn">پاک‌کردن فرم و شروع فاکتور جدید</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============ PREVIEW PANEL ============ -->
+  <div class="preview-wrap">
+    <div id="invoice-preview">
+      <div class="watermark" id="watermarkEl" style="display:none">پیش‌فاکتور</div>
+
+      <div class="inv-head">
+        <div class="shop-block">
+          <div class="logo-box" id="previewLogoBox"><span class="ph">🏪</span></div>
+          <div>
+            <div class="shop-name" id="pShopName">نام فروشگاه شما</div>
+            <div class="shop-meta" id="pShopMeta">شماره تماس · آدرس فروشگاه</div>
+          </div>
+        </div>
+        <div class="badge" id="docBadge">فاکتور فروش</div>
+      </div>
+
+      <div class="inv-meta-row">
+        <div><b>شماره سند</b><span id="pInvNum">—</span></div>
+        <div><b>تاریخ صدور</b><span id="pInvDate">—</span></div>
+        <div><b>سررسید</b><span id="pDueDate">—</span></div>
+      </div>
+
+      <div class="cust-block">
+        <b>مشخصات خریدار</b>
+        <div class="cname" id="pCustName">نام مشتری</div>
+        <div class="cmeta" id="pCustMeta">شماره تماس · آدرس</div>
+      </div>
+
+      <div class="items-card">
+        <table class="inv-items">
+          <thead><tr><th>شرح</th><th>تعداد</th><th>قیمت واحد (ریال)</th><th>جمع (ریال)</th></tr></thead>
+          <tbody id="pItemsBody"></tbody>
+        </table>
+      </div>
+
+      <div class="totals-block">
+        <div class="totals-line"><span>جمع جزء</span><span id="pSubtotal">۰ ریال</span></div>
+        <div class="totals-line" id="pDiscountLine"><span>تخفیف</span><span id="pDiscount">۰ ریال</span></div>
+        <div class="totals-line" id="pTaxLine"><span>مالیات بر ارزش افزوده</span><span id="pTax">۰ ریال</span></div>
+        <div class="totals-line grand"><span>مبلغ قابل پرداخت</span><span id="pGrandTotal">۰ ریال</span></div>
+        <div class="amount-words" id="pWords">مبلغ به حروف: صفر ریال</div>
+      </div>
+
+      <div class="notes-box" id="pNotesBox" style="display:none"><b>توضیحات:</b> <span id="pNotes"></span></div>
+
+      <div class="pay-sign-row">
+        <div class="pay-block" id="pPayBlock">
+          <b class="pt">اطلاعات پرداخت</b>
+          <div id="pPayLines"><div class="pay-line"><span>—</span></div></div>
+        </div>
+        <div class="sign-block">
+          <div class="sign-stage">
+            <img id="pSignImg" class="sign-img" style="display:none">
+            <div class="stamp" id="pStamp">
+              <svg viewBox="0 0 100 100" width="96" height="96" id="pStampSvg" style="width:100%;height:100%;">
+                <defs>
+                  <path id="circlePath" d="M 50,50 m -36,0 a 36,36 0 1,1 72,0 a 36,36 0 1,1 -72,0"/>
+                </defs>
+                <circle cx="50" cy="50" r="46" fill="none" stroke="#E8553B" stroke-width="2.5"/>
+                <circle cx="50" cy="50" r="38" fill="none" stroke="#E8553B" stroke-width="1.2" stroke-dasharray="2,3"/>
+                <text font-size="9" fill="#E8553B" font-weight="700">
+                  <textPath href="#circlePath" startOffset="2%" id="stampShopText">فروشگاه</textPath>
+                </text>
+                <text x="50" y="53" text-anchor="middle" font-size="11" fill="#E8553B" font-weight="800">تایید شد</text>
+                <path d="M50 20 L54 30 L50 27 L46 30 Z" fill="#E8553B"/>
+              </svg>
+              <img id="pStampImg" style="display:none">
+            </div>
+          </div>
+          <div class="sign-caption">امضا و مهر فروشنده</div>
+        </div>
+      </div>
+
+      <div class="inv-footer">از خرید شما سپاسگزاریم 🌸 &nbsp;|&nbsp; این سند به صورت الکترونیکی صادر شده است</div>
+    </div>
+  </div>
+
+</div>
+
+<button class="fab-toggle" id="fabToggle">☰</button>
+<div class="action-bar no-print" id="actionBar">
+  <button id="printBtn">🖨️ پرینت</button>
+  <button id="pdfBtn" class="primary">📄 دریافت PDF</button>
+  <button id="imgBtn">🖼️ دریافت تصویر</button>
+  <button id="shareBtn">📤 اشتراک‌گذاری</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ============ SETTINGS MODAL ============ -->
+<div class="modal-overlay" id="settingsOverlay">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>⚙️ تنظیمات ثابت فروشگاه</h2>
+      <button class="modal-close" id="closeSettingsBtn">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="accordion-section open">
+        <div class="accordion-head"><span class="icon">🔢</span> شماره‌گذاری فاکتور <span class="chev">⌄</span></div>
+        <div class="accordion-body">
+          <div class="field">
+            <label>شماره فاکتور بعدی</label>
+            <input type="number" id="setNextNumber" min="1">
+            <div class="hint">فاکتورهای جدید از این شماره شروع می‌شوند و پس از هر تایید، به‌صورت خودکار افزایش می‌یابد.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-section open">
+        <div class="accordion-head"><span class="icon">🎨</span> قالب و گرافیک فاکتور <span class="chev">⌄</span></div>
+        <div class="accordion-body">
+          <div class="tpl-grid" id="tplGrid">
+            <button class="tpl-card" data-tpl="classic"><span class="tpl-swatch tpl-swatch-classic"></span>کلاسیک</button>
+            <button class="tpl-card" data-tpl="minimal"><span class="tpl-swatch tpl-swatch-minimal"></span>مینیمال</button>
+            <button class="tpl-card" data-tpl="bold"><span class="tpl-swatch tpl-swatch-bold"></span>رنگی و پررنگ</button>
+            <button class="tpl-card" data-tpl="formal"><span class="tpl-swatch tpl-swatch-formal"></span>رسمی و اداری</button>
+          </div>
+          <div class="hint">قالب انتخابی روی پیش‌نمایش، پرینت، PDF و خروجی تصویر فاکتور اعمال می‌شود.</div>
+        </div>
+      </div>
+
+      <div class="accordion-section open">
+        <div class="accordion-head"><span class="icon">🏪</span> اطلاعات فروشنده <span class="chev">⌄</span></div>
+        <div class="accordion-body">
+          <div class="field"><label>نام فروشگاه</label><input type="text" id="setShopName" placeholder="مثلاً: فروشگاه گل‌بهار"></div>
+          <div class="row2">
+            <div class="field"><label>شماره تماس</label><input type="tel" id="setShopPhone" placeholder="021-xxxxxxx"></div>
+            <div class="field"><label>ایمیل (اختیاری)</label><input type="text" id="setShopEmail" placeholder="shop@mail.com"></div>
+          </div>
+          <div class="field"><label>آدرس</label><input type="text" id="setShopAddress" placeholder="آدرس فروشگاه"></div>
+        </div>
+      </div>
+
+      <div class="accordion-section open">
+        <div class="accordion-head"><span class="icon">🖼️</span> لوگو، امضا و مهر <span class="chev">⌄</span></div>
+        <div class="accordion-body">
+          <div class="upload-grid">
+            <div class="field">
+              <label>لوگو</label>
+              <label class="upload-zone" id="setLogoZone">
+                <input type="file" id="setLogoInput" accept="image/*">
+                <div class="uz-empty"><span class="big">🖼️</span>آپلود لوگو</div>
+              </label>
+            </div>
+            <div class="field">
+              <label>امضا</label>
+              <label class="upload-zone" id="setSignZone">
+                <input type="file" id="setSignInput" accept="image/*">
+                <div class="uz-empty"><span class="big">🖊️</span>آپلود امضا</div>
+              </label>
+            </div>
+            <div class="field">
+              <label>مهر</label>
+              <label class="upload-zone" id="setStampZone">
+                <input type="file" id="setStampInput" accept="image/*">
+                <div class="uz-empty"><span class="big">🔴</span>آپلود مهر</div>
+              </label>
+            </div>
+          </div>
+          <div class="hint">در صورت آپلود نکردن مهر، یک مهر گرافیکی نمونه هنگام تایید فاکتور نمایش داده می‌شود. تصویر مهر با نسبت واقعی خودش (نه لزوماً مربع) در فاکتور و در PDF/تصویر خروجی نمایش داده می‌شود.</div>
+        </div>
+      </div>
+
+      <div class="accordion-section open">
+        <div class="accordion-head"><span class="icon">💳</span> شماره کارت‌ها و شماره‌های شبا <span class="chev">⌄</span></div>
+        <div class="accordion-body">
+          <div id="pmList"></div>
+          <div class="toggle-pair">
+            <button class="active" id="setCardTypeBtn" data-type="card">شماره کارت</button>
+            <button id="setIbanTypeBtn" data-type="iban">شماره شبا</button>
+          </div>
+          <div class="field" id="setCardField"><label>شماره کارت</label><input type="text" id="setCardNumber" placeholder="xxxx-xxxx-xxxx-xxxx" maxlength="19"></div>
+          <div class="field" id="setIbanField" style="display:none"><label>شماره شبا</label><input type="text" id="setIbanNumber" placeholder="IRxxxxxxxxxxxxxxxxxxxxxxxx" maxlength="26"></div>
+          <div class="row2">
+            <div class="field"><label>نام بانک</label><input type="text" id="setBankName" placeholder="مثلاً: بانک ملت"></div>
+            <div class="field"><label>صاحب حساب</label><input type="text" id="setAccountHolder" placeholder="نام صاحب حساب"></div>
+          </div>
+          <button class="pm-add-btn" id="pmAddBtn">＋ افزودن به لیست</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ============ HISTORY MODAL ============ -->
+<div class="modal-overlay" id="historyOverlay">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>📜 سوابق فاکتورها و پیش‌فاکتورها</h2>
+      <button class="modal-close" id="closeHistoryBtn">✕</button>
+    </div>
+    <div class="modal-body modal-pad" id="historyList"></div>
+  </div>
+</div>
+
+<!-- ============ DATABASE MODAL ============ -->
+<div class="modal-overlay" id="dbOverlay">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>🗄️ دیتابیس اطلاعات (JSON)</h2>
+      <button class="modal-close" id="closeDbBtn">✕</button>
+    </div>
+    <div class="modal-body modal-pad">
+      <div class="hint" id="dbStatus" style="margin-bottom:14px;">وضعیت: متصل نیست — اطلاعات فقط در همین نشست مرورگر نگه‌داری می‌شود.</div>
+
+      <button class="pm-add-btn" id="connectDbBtn">📁 انتخاب یا ساخت فایل دیتابیس (ذخیره خودکار)</button>
+      <div class="hint" style="margin-bottom:16px;">این گزینه فقط در مرورگرهای مبتنی بر Chrome/Edge کار می‌کند. به‌دلیل محدودیت‌های امنیتی مرورگرها، هر بار که این صفحه را دوباره باز می‌کنید، لازم است یک‌بار روی همین دکمه بزنید و فایل دیتابیس خود را انتخاب کنید؛ پس از آن تا زمانی که صفحه باز است، همه چیز به‌صورت خودکار در همان فایل ذخیره می‌شود.</div>
+
+      <div class="row2">
+        <button class="pm-add-btn" id="exportDbBtn" style="background:var(--accent-dark);">⬇️ دانلود نسخه پشتیبان</button>
+        <button class="pm-add-btn" id="importDbBtnTrigger" style="background:var(--ink-soft);">⬆️ بارگذاری از فایل</button>
+      </div>
+      <input type="file" id="dbImportInput" accept="application/json" style="display:none;">
+      <div class="hint" style="margin-top:10px;">روش دانلود/بارگذاری دستی در همهٔ مرورگرها کار می‌کند و برای پشتیبان‌گیری یا انتقال اطلاعات به سیستم دیگر مناسب است.</div>
+
+      <div style="height:1px;background:var(--line);margin:18px 0;"></div>
+
+      <div class="hint" id="jsonbinStatus" style="margin-bottom:12px;">☁️ jsonbin.io: فایل jsonbin-config.js بارگذاری نشده است.</div>
+      <div class="row2">
+        <button class="pm-add-btn" id="jsonbinPullBtn" style="background:var(--accent-dark);">⬇️ دریافت از jsonbin.io</button>
+        <button class="pm-add-btn" id="jsonbinPushBtn" style="background:var(--ink);">⬆️ ارسال به jsonbin.io</button>
+      </div>
+      <div class="hint" style="margin-top:10px;">
+        برای فعال‌سازی، فایل <b>jsonbin-config.js</b> (همراه همین فاکتور ارسال شده) را باز کنید، کلید API و شناسه Bin خود را از سایت jsonbin.io در آن قرار دهید و آن را کنار فایل html نگه دارید. با این کار، اطلاعات هر بار که این صفحه باز می‌شود به‌صورت خودکار از jsonbin.io خوانده می‌شود و با هر تغییری خودکار در آن ذخیره می‌شود — بدون نیاز به انتخاب فایل در هر بار.
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!--
+  jsonbin-config.js must sit next to this HTML file (same folder).
+  It defines window.JSONBIN_CONFIG with your jsonbin.io API key and bin ID.
+  If the file is missing, the app simply falls back to local-only storage — nothing breaks.
+-->
+<script src="jsonbin-config.js" onerror="console.warn('jsonbin-config.js not found — cloud sync disabled, local storage still works.')"></script>
+
+<script>
+/* ============================ helpers ============================ */
+const faDigits = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+function toFa(n){ return String(n).replace(/[0-9]/g, d => faDigits[d]); }
+function fmtMoney(n){
+  n = Math.round(n) || 0;
+  return toFa(n.toLocaleString('en-US')) + ' ریال';
+}
+function fmtNum(n){ return toFa(Math.round(n).toLocaleString('en-US')); }
+
+function numToWords(num){
+  num = Math.round(num);
+  if(num === 0) return 'صفر';
+  const ones=['','یک','دو','سه','چهار','پنج','شش','هفت','هشت','نه'];
+  const teens=['ده','یازده','دوازده','سیزده','چهارده','پانزده','شانزده','هفده','هجده','نوزده'];
+  const tens=['','ده','بیست','سی','چهل','پنجاه','شصت','هفتاد','هشتاد','نود'];
+  const huns=['','صد','دویست','سیصد','چهارصد','پانصد','ششصد','هفتصد','هشتصد','نهصد'];
+  const scales=['',' هزار',' میلیون',' میلیارد',' تریلیون'];
+  function three(n){
+    let s='';
+    const h=Math.floor(n/100), r=n%100;
+    if(h) s+=huns[h];
+    if(r){
+      if(s) s+=' و ';
+      if(r<10) s+=ones[r];
+      else if(r<20) s+=teens[r-10];
+      else{
+        const t=Math.floor(r/10), o=r%10;
+        s+=tens[t];
+        if(o) s+=' و '+ones[o];
+      }
+    }
+    return s;
+  }
+  let groups=[], n=num;
+  while(n>0){ groups.push(n%1000); n=Math.floor(n/1000); }
+  let parts=[];
+  for(let i=groups.length-1;i>=0;i--){
+    if(groups[i]>0) parts.push(three(groups[i])+scales[i]);
+  }
+  return parts.join(' و ');
+}
+
+function toJalali(gy,gm,gd){
+  const g_d_m=[0,31,59,90,120,151,181,212,243,273,304,334];
+  let jy=(gy<=1600)?0:979;
+  gy -= (gy<=1600)?621:1600;
+  let gy2=(gm>2)?(gy+1):gy;
+  let days=(365*gy)+Math.floor((gy2+3)/4)-Math.floor((gy2+99)/100)+Math.floor((gy2+399)/400)-80+gd+g_d_m[gm-1];
+  jy += 33*Math.floor(days/12053);
+  days %= 12053;
+  jy += 4*Math.floor(days/1461);
+  days %= 1461;
+  if(days>365){ jy += Math.floor((days-1)/365); days=(days-1)%365; }
+  let jm,jd;
+  if(days<186){ jm=1+Math.floor(days/31); jd=1+(days%31); }
+  else{ jm=7+Math.floor((days-186)/30); jd=1+((days-186)%30); }
+  return [jy,jm,jd];
+}
+const jMonths=['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
+function todayJalaliStr(){
+  const t=new Date();
+  const [jy,jm,jd]=toJalali(t.getFullYear(),t.getMonth()+1,t.getDate());
+  return `${toFa(jd)} ${jMonths[jm-1]} ${toFa(jy)}`;
+}
+
+function showToast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;
+  el.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t=setTimeout(()=>el.classList.remove('show'),3200);
+}
+
+function confettiBurst(){
+  const colors=['#17A398','#E8553B','#F2A93B','#1B2A4A','#5B6EE1'];
+  for(let i=0;i<28;i++){
+    const c=document.createElement('div');
+    c.className='confetti';
+    c.style.left=(45+Math.random()*10)+'vw';
+    c.style.top='40vh';
+    c.style.background=colors[Math.floor(Math.random()*colors.length)];
+    c.style.transform=`rotate(${Math.random()*360}deg)`;
+    document.body.appendChild(c);
+    const dx=(Math.random()-0.5)*500;
+    const dy=200+Math.random()*300;
+    const rot=(Math.random()-0.5)*720;
+    const dur=900+Math.random()*700;
+    c.animate([
+      {transform:c.style.transform+' translate(0,0)', opacity:1},
+      {transform:`rotate(${rot}deg) translate(${dx}px, ${dy}px)`, opacity:0}
+    ], {duration:dur, easing:'cubic-bezier(.2,.7,.4,1)'});
+    setTimeout(()=>c.remove(), dur+50);
+  }
+}
+
+/* ============================ state ============================ */
+let docType='proforma';
+let itemCounter=0;
+let confirmed=false;
+let pmCounter=0;
+let historyCounter=0;
+let dbFileHandle=null;
+let saveTimer=null;
+
+const settings = {
+  nextNumber: 1001,
+  template: 'classic', // classic | minimal | bold | formal
+  shopName:'', shopPhone:'', shopEmail:'', shopAddress:'',
+  logo:null, sign:null, stamp:null, stampRatio:1,
+  payments:[] // {id, type:'card'|'iban', number, bank, holder}
+};
+
+let invoiceHistory = []; // {id, number, docType, date, customerName, total, status, snapshot}
+
+const toggles = { name:true, phone:true, address:true, logo:true, sign:true, stamp:true };
+let selectedPayIds = new Set();
+
+/* ============================ accordion (works inside modals too) ============================ */
+document.body.addEventListener('click', e=>{
+  const head=e.target.closest('.accordion-head');
+  if(head) head.parentElement.classList.toggle('open');
+});
+
+/* ============================ doctype toggle ============================ */
+const btnInvoice=document.getElementById('btnInvoice');
+const btnProforma=document.getElementById('btnProforma');
+btnInvoice.addEventListener('click',()=>{ docType='invoice'; btnInvoice.classList.add('active'); btnProforma.classList.remove('active'); renderPreview(); });
+btnProforma.addEventListener('click',()=>{ docType='proforma'; btnProforma.classList.add('active'); btnInvoice.classList.remove('active'); renderPreview(); });
+
+/* ============================ theme ============================ */
+document.querySelectorAll('.swatch').forEach(sw=>{
+  sw.addEventListener('click',()=>{
+    document.querySelectorAll('.swatch').forEach(s=>s.classList.remove('active'));
+    sw.classList.add('active');
+    document.documentElement.style.setProperty('--accent', sw.dataset.color);
+    document.documentElement.style.setProperty('--accent-dark', sw.dataset.dark);
+    document.documentElement.style.setProperty('--accent-rgb', sw.dataset.rgb);
+  });
+});
+
+/* ============================ invoice template picker ============================ */
+function applyTemplateClass(){
+  const el=document.getElementById('invoice-preview');
+  el.className = 'tpl-'+(settings.template||'classic');
+}
+function syncTplCardActive(){
+  document.querySelectorAll('.tpl-card').forEach(c=>{
+    c.classList.toggle('active', c.dataset.tpl===(settings.template||'classic'));
+  });
+}
+document.querySelectorAll('.tpl-card').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    settings.template = btn.dataset.tpl;
+    syncTplCardActive();
+    renderPreview();
+    scheduleSave();
+  });
+});
+
+/* ============================ modal open/close helpers ============================ */
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(ov=>{
+  ov.addEventListener('click', e=>{ if(e.target===ov) ov.classList.remove('open'); });
+});
+
+function openSettings(){ openModal('settingsOverlay'); }
+function closeSettings(){ closeModal('settingsOverlay'); renderShopSummary(); renderPaymentChecklist(); }
+document.getElementById('openSettingsBtn').addEventListener('click', openSettings);
+document.getElementById('closeSettingsBtn').addEventListener('click', closeSettings);
+document.getElementById('editShopFromForm').addEventListener('click', openSettings);
+document.getElementById('editPayFromForm').addEventListener('click', openSettings);
+
+function openHistory(){ renderHistoryList(); openModal('historyOverlay'); }
+function closeHistory(){ closeModal('historyOverlay'); }
+document.getElementById('openHistoryBtn').addEventListener('click', openHistory);
+document.getElementById('closeHistoryBtn').addEventListener('click', closeHistory);
+
+document.getElementById('openDbBtn').addEventListener('click', ()=>openModal('dbOverlay'));
+document.getElementById('closeDbBtn').addEventListener('click', ()=>closeModal('dbOverlay'));
+
+/* ============================ generic upload helper ============================ */
+function setupUpload(inputId, zoneId, onLoaded, afterChange){
+  const zone=document.getElementById(zoneId);
+  const input=document.getElementById(inputId);
+  if(!input) return;
+  input.addEventListener('change', e=>{
+    const file=e.target.files[0];
+    if(!file) return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      onLoaded(ev.target.result);
+      paintUploadZone(inputId, zoneId, ev.target.result, onLoaded, afterChange);
+      if(afterChange) afterChange();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+function paintUploadZone(inputId, zoneId, dataUrl, onLoaded, afterChange){
+  const zone=document.getElementById(zoneId);
+  if(!dataUrl){
+    zone.classList.remove('has-image');
+    zone.innerHTML=`<input type="file" id="${inputId}" accept="image/*"><div class="uz-empty"><span class="big">🖼️</span>آپلود</div>`;
+    setupUpload(inputId, zoneId, onLoaded, afterChange);
+    return;
+  }
+  zone.classList.add('has-image');
+  zone.innerHTML='';
+  const img=document.createElement('img'); img.src=dataUrl; zone.appendChild(img);
+  const rm=document.createElement('button');
+  rm.className='remove-img'; rm.type='button'; rm.textContent='✕';
+  rm.addEventListener('click', ev=>{
+    ev.preventDefault(); ev.stopPropagation();
+    onLoaded(null);
+    paintUploadZone(inputId, zoneId, null, onLoaded, afterChange);
+    if(afterChange) afterChange();
+  });
+  zone.appendChild(rm);
+}
+
+function updateStampRatio(cb){
+  if(settings.stamp){
+    const img=new Image();
+    img.onload=()=>{
+      settings.stampRatio = (img.naturalWidth && img.naturalHeight) ? (img.naturalWidth/img.naturalHeight) : 1;
+      if(cb) cb();
+    };
+    img.onerror=()=>{ settings.stampRatio=1; if(cb) cb(); };
+    img.src=settings.stamp;
+  }else{
+    settings.stampRatio=1;
+    if(cb) cb();
+  }
+}
+
+setupUpload('setLogoInput','setLogoZone', url=>{ settings.logo=url; }, ()=>{ renderPreview(); renderShopSummary(); scheduleSave(); });
+setupUpload('setSignInput','setSignZone', url=>{ settings.sign=url; }, ()=>{ renderPreview(); renderShopSummary(); scheduleSave(); });
+setupUpload('setStampInput','setStampZone', url=>{ settings.stamp=url; }, ()=>{ updateStampRatio(renderPreview); renderShopSummary(); scheduleSave(); });
+
+/* ============================ settings: shop fields ============================ */
+['setShopName','setShopPhone','setShopEmail','setShopAddress'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', e=>{
+    const map={setShopName:'shopName',setShopPhone:'shopPhone',setShopEmail:'shopEmail',setShopAddress:'shopAddress'};
+    settings[map[id]]=e.target.value;
+    renderShopSummary();
+    renderPreview();
+    scheduleSave();
+  });
+});
+document.getElementById('setNextNumber').addEventListener('input', e=>{
+  const v=parseInt(e.target.value)||1;
+  settings.nextNumber=v;
+  scheduleSave();
+});
+
+/* ============================ settings: payment methods manager ============================ */
+const setCardTypeBtn=document.getElementById('setCardTypeBtn');
+const setIbanTypeBtn=document.getElementById('setIbanTypeBtn');
+const setCardField=document.getElementById('setCardField');
+const setIbanField=document.getElementById('setIbanField');
+let newPmType='card';
+setCardTypeBtn.addEventListener('click',()=>{ newPmType='card'; setCardTypeBtn.classList.add('active'); setIbanTypeBtn.classList.remove('active'); setCardField.style.display='block'; setIbanField.style.display='none'; });
+setIbanTypeBtn.addEventListener('click',()=>{ newPmType='iban'; setIbanTypeBtn.classList.add('active'); setCardTypeBtn.classList.remove('active'); setIbanField.style.display='block'; setCardField.style.display='none'; });
+
+document.getElementById('setCardNumber').addEventListener('input', e=>{
+  let v=e.target.value.replace(/\D/g,'').slice(0,16);
+  e.target.value=v.replace(/(.{4})/g,'$1-').replace(/-$/,'');
+});
+document.getElementById('setIbanNumber').addEventListener('input', e=>{
+  let v=e.target.value.toUpperCase().replace(/[^0-9A-Z]/g,'');
+  if(!v.startsWith('IR')) v='IR'+v.replace(/^IR/,'');
+  e.target.value=v.slice(0,26);
+});
+
+document.getElementById('pmAddBtn').addEventListener('click', ()=>{
+  const number = newPmType==='card' ? document.getElementById('setCardNumber').value : document.getElementById('setIbanNumber').value;
+  const bank=document.getElementById('setBankName').value;
+  const holder=document.getElementById('setAccountHolder').value;
+  if(!number.trim()){ showToast('لطفاً شماره کارت یا شبا را وارد کنید'); return; }
+  pmCounter++;
+  const entry={ id:'pm'+pmCounter+'_'+Date.now(), type:newPmType, number, bank, holder };
+  settings.payments.push(entry);
+  selectedPayIds.add(entry.id);
+  document.getElementById('setCardNumber').value='';
+  document.getElementById('setIbanNumber').value='';
+  document.getElementById('setBankName').value='';
+  document.getElementById('setAccountHolder').value='';
+  renderPmList();
+  renderPaymentChecklist();
+  renderPreview();
+  scheduleSave();
+  showToast('روش پرداخت اضافه شد');
+});
+
+function renderPmList(){
+  const wrap=document.getElementById('pmList');
+  if(settings.payments.length===0){
+    wrap.innerHTML='<div class="empty-note">هنوز شماره‌ای اضافه نشده است.</div>';
+    return;
+  }
+  wrap.innerHTML='';
+  settings.payments.forEach(pm=>{
+    const div=document.createElement('div');
+    div.className='pm-list-item';
+    const label = pm.type==='card' ? 'شماره کارت' : 'شماره شبا';
+    div.innerHTML=`<div class="pm-text"><b>${label}: ${toFa(pm.number)}</b><span>${pm.bank||''}${pm.bank&&pm.holder?' · ':''}${pm.holder||''}</span></div><button class="pm-del" type="button">✕</button>`;
+    div.querySelector('.pm-del').addEventListener('click', ()=>{
+      settings.payments=settings.payments.filter(p=>p.id!==pm.id);
+      selectedPayIds.delete(pm.id);
+      renderPmList();
+      renderPaymentChecklist();
+      renderPreview();
+      scheduleSave();
+    });
+    wrap.appendChild(div);
+  });
+}
+
+/* ============================ main form: shop summary + toggles ============================ */
+function renderShopSummary(){
+  const wrap=document.getElementById('shopSummary');
+  const rows=[];
+  rows.push(`<div class="ro-item">
+    <input type="checkbox" id="tgLogo" ${toggles.logo?'checked':''}>
+    ${settings.logo?`<img class="ro-thumb" src="${settings.logo}">`:'<div class="ro-thumb"></div>'}
+    <div class="ro-text"><b>لوگو</b><small>${settings.logo?'آپلود شده':'در تنظیمات آپلود نشده'}</small></div>
+  </div>`);
+  rows.push(`<div class="ro-item">
+    <input type="checkbox" id="tgName" ${toggles.name?'checked':''}>
+    <div class="ro-text"><b>${settings.shopName||'<span class="ro-empty">نام فروشگاه وارد نشده</span>'}</b><small>نام فروشگاه</small></div>
+  </div>`);
+  rows.push(`<div class="ro-item">
+    <input type="checkbox" id="tgPhone" ${toggles.phone?'checked':''}>
+    <div class="ro-text"><b>${settings.shopPhone||'<span class="ro-empty">وارد نشده</span>'}</b><small>شماره تماس</small></div>
+  </div>`);
+  rows.push(`<div class="ro-item">
+    <input type="checkbox" id="tgAddress" ${toggles.address?'checked':''}>
+    <div class="ro-text"><b>${settings.shopAddress||'<span class="ro-empty">وارد نشده</span>'}</b><small>آدرس</small></div>
+  </div>`);
+  rows.push(`<div class="ro-item">
+    <input type="checkbox" id="tgSign" ${toggles.sign?'checked':''}>
+    ${settings.sign?`<img class="ro-thumb" src="${settings.sign}">`:'<div class="ro-thumb"></div>'}
+    <div class="ro-text"><b>امضا</b><small>${settings.sign?'آپلود شده':'در تنظیمات آپلود نشده'}</small></div>
+  </div>`);
+  rows.push(`<div class="ro-item">
+    <input type="checkbox" id="tgStamp" ${toggles.stamp?'checked':''}>
+    ${settings.stamp?`<img class="ro-thumb" src="${settings.stamp}">`:'<div class="ro-thumb"></div>'}
+    <div class="ro-text"><b>مهر</b><small>${settings.stamp?'آپلود شده':'مهر گرافیکی پیش‌فرض استفاده می‌شود'}</small></div>
+  </div>`);
+  wrap.innerHTML=rows.join('');
+  ['tgLogo','tgName','tgPhone','tgAddress','tgSign','tgStamp'].forEach(id=>{
+    document.getElementById(id).addEventListener('change', e=>{
+      const key=id.replace('tg','').toLowerCase();
+      toggles[key]=e.target.checked;
+      renderPreview();
+    });
+  });
+}
+
+/* ============================ main form: payment checklist ============================ */
+function renderPaymentChecklist(){
+  const wrap=document.getElementById('paymentChecklist');
+  if(settings.payments.length===0){
+    wrap.innerHTML='<div class="empty-note">روش پرداختی ثبت نشده — از منوی تنظیمات اضافه کنید.</div>';
+    return;
+  }
+  wrap.innerHTML='';
+  settings.payments.forEach(pm=>{
+    const label = pm.type==='card' ? 'شماره کارت' : 'شماره شبا';
+    const row=document.createElement('label');
+    row.className='pay-check-item';
+    row.innerHTML=`<input type="checkbox" ${selectedPayIds.has(pm.id)?'checked':''}>
+      <div class="pc-text"><b>${label}: ${toFa(pm.number)}</b><span>${pm.bank||''}${pm.bank&&pm.holder?' · ':''}${pm.holder||''}</span></div>`;
+    row.querySelector('input').addEventListener('change', e=>{
+      if(e.target.checked) selectedPayIds.add(pm.id); else selectedPayIds.delete(pm.id);
+      renderPreview();
+    });
+    wrap.appendChild(row);
+  });
+}
+
+/* ============================ items table ============================ */
+const itemsBody=document.getElementById('itemsBody');
+function addItemRow(data){
+  itemCounter++;
+  const tr=document.createElement('tr');
+  const d = data || {};
+  tr.innerHTML=`
+    <td><input class="desc" type="text" data-role="desc" placeholder="نام کالا یا خدمت" value="${d.desc?String(d.desc).replace(/"/g,'&quot;'):''}"></td>
+    <td><input type="number" min="0" data-role="qty" placeholder="۱" value="${d.qty?d.qty:''}" style="width:100%"></td>
+    <td><input type="number" min="0" data-role="price" placeholder="۰" value="${d.price?d.price:''}" style="width:100%"></td>
+    <td class="line-total" data-role="total">۰</td>
+    <td><button class="del-row" type="button">✕</button></td>
+  `;
+  itemsBody.appendChild(tr);
+  tr.querySelector('.del-row').addEventListener('click',()=>{ tr.remove(); renderPreview(); });
+  tr.querySelectorAll('input[type=number]').forEach(inp=>{
+    inp.addEventListener('focus', ()=>inp.select());
+    inp.addEventListener('input', renderPreview);
+  });
+  tr.querySelector('[data-role=desc]').addEventListener('focus', function(){ this.select(); });
+  tr.querySelector('[data-role=desc]').addEventListener('input', renderPreview);
+}
+document.getElementById('addRowBtn').addEventListener('click', ()=>addItemRow());
+
+function getItemsFromForm(){
+  return [...itemsBody.querySelectorAll('tr')].map(tr=>({
+    desc: tr.querySelector('[data-role=desc]').value,
+    qty: parseFloat(tr.querySelector('[data-role=qty]').value)||0,
+    price: parseFloat(tr.querySelector('[data-role=price]').value)||0
+  }));
+}
+
+function computeTotals(items, discType, discVal, taxOn, taxPct){
+  let subtotal=0;
+  items.forEach(it=>{ subtotal += (it.qty||0)*(it.price||0); });
+  const discountAmount = discType==='percent' ? subtotal*discVal/100 : discVal;
+  const afterDiscount = Math.max(subtotal-discountAmount,0);
+  const taxAmount = taxOn ? afterDiscount*taxPct/100 : 0;
+  const grand = afterDiscount+taxAmount;
+  return {subtotal, discountAmount, taxAmount, grand};
+}
+
+/* ============================ discount / tax toggles ============================ */
+const discPercentBtn=document.getElementById('discPercentBtn');
+const discAmountBtn=document.getElementById('discAmountBtn');
+const discLabel=document.getElementById('discLabel');
+let discountType='percent';
+discPercentBtn.addEventListener('click',()=>{ discountType='percent'; discPercentBtn.classList.add('active'); discAmountBtn.classList.remove('active'); discLabel.textContent='درصد تخفیف'; renderPreview(); });
+discAmountBtn.addEventListener('click',()=>{ discountType='amount'; discAmountBtn.classList.add('active'); discPercentBtn.classList.remove('active'); discLabel.textContent='مبلغ تخفیف (ریال)'; renderPreview(); });
+
+/* ============================ generic live-update fields ============================ */
+['custName','custPhone','custPostal','custAddress','invoiceNumber','invoiceDate','dueDate','discountValue','taxPercent','notes']
+ .forEach(id=>document.getElementById(id).addEventListener('input', renderPreview));
+document.getElementById('taxEnabled').addEventListener('change', renderPreview);
+document.getElementById('discountValue').addEventListener('focus', function(){ this.select(); });
+document.getElementById('taxPercent').addEventListener('focus', function(){ this.select(); });
+
+/* ============================ render invoice preview ============================ */
+function renderPreview(){
+  applyTemplateClass();
+  document.getElementById('pShopName').textContent = toggles.name ? (settings.shopName || 'نام فروشگاه شما') : '';
+  document.getElementById('pShopName').style.display = toggles.name ? 'block':'none';
+  const metaParts=[];
+  if(toggles.phone && settings.shopPhone) metaParts.push(settings.shopPhone);
+  if(toggles.address && settings.shopAddress) metaParts.push(settings.shopAddress);
+  document.getElementById('pShopMeta').textContent = metaParts.join(' · ') || (toggles.phone||toggles.address ? 'شماره تماس · آدرس فروشگاه' : '');
+  const logoBox=document.getElementById('previewLogoBox');
+  logoBox.innerHTML = (toggles.logo && settings.logo) ? `<img src="${settings.logo}">` : `<span class="ph">🏪</span>`;
+
+  const badge=document.getElementById('docBadge');
+  const wm=document.getElementById('watermarkEl');
+  if(docType==='invoice'){ badge.textContent='فاکتور فروش'; wm.style.display='none'; }
+  else{ badge.textContent='پیش‌فاکتور'; wm.style.display='flex'; }
+
+  document.getElementById('pInvNum').textContent = toFa(document.getElementById('invoiceNumber').value) || '—';
+  document.getElementById('pInvDate').textContent = document.getElementById('invoiceDate').value || '—';
+  document.getElementById('pDueDate').textContent = document.getElementById('dueDate').value || 'ندارد';
+
+  document.getElementById('pCustName').textContent = document.getElementById('custName').value || 'نام مشتری';
+  const cphone=document.getElementById('custPhone').value, caddr=document.getElementById('custAddress').value;
+  document.getElementById('pCustMeta').textContent = [cphone,caddr].filter(Boolean).join(' · ') || 'شماره تماس · آدرس';
+
+  const items=getItemsFromForm();
+  const pBody=document.getElementById('pItemsBody');
+  pBody.innerHTML='';
+  const rows=[...itemsBody.querySelectorAll('tr')];
+  rows.forEach((tr,idx)=>{
+    const it=items[idx];
+    const total=(it.qty||0)*(it.price||0);
+    tr.querySelector('[data-role=total]').textContent=fmtNum(total);
+    const ptr=document.createElement('tr');
+    ptr.innerHTML=`<td class="desc-cell">${it.desc||'کالا/خدمت'}</td><td>${toFa(it.qty)}</td><td>${fmtNum(it.price)}</td><td>${fmtNum(total)}</td>`;
+    pBody.appendChild(ptr);
+  });
+  if(rows.length===0){
+    pBody.innerHTML='<tr><td colspan="4" style="color:#9aa4b8;padding:16px;">ردیفی اضافه نشده است</td></tr>';
+  }
+
+  const discVal=parseFloat(document.getElementById('discountValue').value)||0;
+  const taxOn=document.getElementById('taxEnabled').checked;
+  const taxPct=parseFloat(document.getElementById('taxPercent').value)||0;
+  const totals=computeTotals(items, discountType, discVal, taxOn, taxPct);
+
+  document.getElementById('pSubtotal').textContent=fmtMoney(totals.subtotal);
+  document.getElementById('pDiscount').textContent='- '+fmtMoney(totals.discountAmount);
+  document.getElementById('pDiscountLine').style.display = totals.discountAmount>0 ? 'flex':'none';
+  document.getElementById('pTax').textContent=fmtMoney(totals.taxAmount);
+  document.getElementById('pTaxLine').style.display = taxOn ? 'flex':'none';
+  document.getElementById('pGrandTotal').textContent=fmtMoney(totals.grand);
+  document.getElementById('pWords').textContent = 'مبلغ به حروف: '+numToWords(totals.grand)+' ریال';
+
+  const notes=document.getElementById('notes').value;
+  document.getElementById('pNotesBox').style.display = notes ? 'block':'none';
+  document.getElementById('pNotes').textContent=notes;
+
+  const payWrap=document.getElementById('pPayLines');
+  const chosen=settings.payments.filter(p=>selectedPayIds.has(p.id));
+  if(chosen.length===0){
+    payWrap.innerHTML='<div class="pay-line"><span>—</span></div>';
+  }else{
+    payWrap.innerHTML=chosen.map(pm=>{
+      const label = pm.type==='card' ? 'شماره کارت' : 'شماره شبا';
+      const holderLine = pm.holder ? `<div class="pay-line"><b>صاحب حساب</b><span>${pm.holder}</span></div>` : '';
+      const bankLine = pm.bank ? `<div class="pay-line"><b>بانک</b><span>${pm.bank}</span></div>` : '';
+      return `${bankLine}<div class="pay-line"><b>${label}</b><span class="pay-number">${toFa(pm.number)}</span></div>${holderLine}`;
+    }).join('');
+  }
+
+  const signImg=document.getElementById('pSignImg');
+  if(toggles.sign && settings.sign){ signImg.src=settings.sign; signImg.style.display='block'; } else { signImg.style.display='none'; }
+  document.getElementById('stampShopText').textContent = (settings.shopName || 'فروشگاه') + ' ★ ';
+
+  const stampEl=document.getElementById('pStamp');
+  const stampSvg=document.getElementById('pStampSvg');
+  const stampImg=document.getElementById('pStampImg');
+  if(settings.stamp){
+    stampSvg.style.display='none';
+    stampImg.style.display='block';
+    stampImg.src=settings.stamp;
+    const ratio = settings.stampRatio || 1;
+    const h=104;
+    let w=Math.round(h*ratio);
+    w=Math.max(55, Math.min(190, w));
+    stampEl.style.width=w+'px';
+    stampEl.style.height=h+'px';
+  }else{
+    stampSvg.style.display='block';
+    stampImg.style.display='none';
+    stampEl.style.width='108px';
+    stampEl.style.height='108px';
+  }
+  stampEl.style.visibility = toggles.stamp ? 'visible':'hidden';
+
+  const cb=document.getElementById('confirmBtn');
+  cb.textContent = confirmed ? '✔ فاکتور مهر و تایید شد' : '✅ تایید و مهر فاکتور';
+  cb.classList.toggle('locked', confirmed);
+}
+
+/* ============================ snapshot / history ============================ */
+function collectCurrentSnapshot(){
+  return {
+    docType,
+    invoiceNumber: document.getElementById('invoiceNumber').value,
+    invoiceDate: document.getElementById('invoiceDate').value,
+    dueDate: document.getElementById('dueDate').value,
+    custName: document.getElementById('custName').value,
+    custPhone: document.getElementById('custPhone').value,
+    custPostal: document.getElementById('custPostal').value,
+    custAddress: document.getElementById('custAddress').value,
+    items: getItemsFromForm(),
+    discountType,
+    discountValue: parseFloat(document.getElementById('discountValue').value)||0,
+    taxEnabled: document.getElementById('taxEnabled').checked,
+    taxPercent: parseFloat(document.getElementById('taxPercent').value)||0,
+    notes: document.getElementById('notes').value,
+    selectedPayIds: Array.from(selectedPayIds),
+    toggles: Object.assign({}, toggles)
+  };
+}
+
+function loadSnapshotIntoForm(h){
+  const s=h.snapshot;
+  docType=s.docType;
+  if(docType==='invoice'){ btnInvoice.classList.add('active'); btnProforma.classList.remove('active'); }
+  else{ btnProforma.classList.add('active'); btnInvoice.classList.remove('active'); }
+  document.getElementById('invoiceNumber').value=s.invoiceNumber;
+  document.getElementById('invoiceDate').value=s.invoiceDate;
+  document.getElementById('dueDate').value=s.dueDate;
+  document.getElementById('custName').value=s.custName;
+  document.getElementById('custPhone').value=s.custPhone;
+  document.getElementById('custPostal').value=s.custPostal;
+  document.getElementById('custAddress').value=s.custAddress;
+
+  itemsBody.innerHTML='';
+  (s.items||[]).forEach(it=>addItemRow(it));
+  if(itemsBody.children.length===0) addItemRow();
+
+  discountType=s.discountType||'percent';
+  if(discountType==='percent'){ discPercentBtn.classList.add('active'); discAmountBtn.classList.remove('active'); discLabel.textContent='درصد تخفیف'; }
+  else{ discAmountBtn.classList.add('active'); discPercentBtn.classList.remove('active'); discLabel.textContent='مبلغ تخفیف (ریال)'; }
+  document.getElementById('discountValue').value=s.discountValue||0;
+  document.getElementById('taxEnabled').checked=!!s.taxEnabled;
+  document.getElementById('taxPercent').value=s.taxPercent||9;
+  document.getElementById('notes').value=s.notes||'';
+
+  selectedPayIds = new Set(s.selectedPayIds||[]);
+  Object.assign(toggles, s.toggles||{});
+
+  /* editable: unlock the confirm button so changes can be saved back */
+  confirmed=false;
+  renderShopSummary();
+  renderPaymentChecklist();
+  renderPreview();
+  const stamp=document.getElementById('pStamp');
+  if(toggles.stamp){ stamp.classList.remove('show'); void stamp.offsetWidth; stamp.classList.add('show'); }
+  showToast('فاکتور برای ویرایش بارگذاری شد — پس از تغییرات، دوباره تایید کنید');
+}
+
+function renderHistoryList(){
+  const wrap=document.getElementById('historyList');
+  if(!invoiceHistory || invoiceHistory.length===0){
+    wrap.innerHTML='<div class="empty-note">هنوز فاکتوری ثبت نشده است. پس از تایید یک فاکتور، در اینجا نمایش داده می‌شود.</div>';
+    return;
+  }
+  wrap.innerHTML='';
+  invoiceHistory.forEach(h=>{
+    const card=document.createElement('div');
+    card.className='history-card';
+    const statusClass = h.status==='settled' ? 'status-settled' : 'status-unpaid';
+    const statusText = h.status==='settled' ? 'تسویه شده ✅' : 'در انتظار تسویه';
+    const typeText = h.docType==='invoice' ? 'فاکتور فروش' : 'پیش‌فاکتور';
+    card.innerHTML=`
+      <div class="history-top">
+        <div class="ht-text"><b>${typeText} #${toFa(h.number)}</b><span>${h.date||''} · ${h.customerName||'—'}</span></div>
+        <div class="history-total">${fmtMoney(h.total)}</div>
+      </div>
+      <div class="history-bottom">
+        <span class="status-pill ${statusClass}">${statusText}</span>
+        <div class="history-actions">
+          <button class="link-btn hv-btn" data-act="view">✏️ ویرایش</button>
+          <button class="link-btn hv-btn" data-act="toggle">${h.status==='settled'?'لغو تسویه':'تایید تسویه'}</button>
+          <button class="link-btn hv-btn" data-act="delete" style="color:var(--anar);">حذف</button>
+        </div>
+      </div>
+    `;
+    card.querySelectorAll('.hv-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const act=btn.dataset.act;
+        if(act==='view'){ loadSnapshotIntoForm(h); closeHistory(); }
+        else if(act==='toggle'){ h.status = h.status==='settled' ? 'unpaid':'settled'; renderHistoryList(); scheduleSave(); }
+        else if(act==='delete'){ if(confirm('حذف این سند از سوابق؟')){ invoiceHistory=invoiceHistory.filter(x=>x.id!==h.id); renderHistoryList(); scheduleSave(); } }
+      });
+    });
+    wrap.appendChild(card);
+  });
+}
+
+/* ============================ confirm / stamp ============================ */
+document.getElementById('confirmBtn').addEventListener('click', ()=>{
+  if(confirmed) return;
+  confirmed=true;
+  if(toggles.stamp){
+    const stamp=document.getElementById('pStamp');
+    stamp.classList.remove('show'); void stamp.offsetWidth;
+    stamp.classList.add('show');
+  }
+  confettiBurst();
+  showToast('فاکتور شما با موفقیت تایید شد 🎉');
+
+  const snap=collectCurrentSnapshot();
+  const totals=computeTotals(snap.items, snap.discountType, snap.discountValue, snap.taxEnabled, snap.taxPercent);
+  let existing=invoiceHistory.find(x=>x.number===snap.invoiceNumber && x.docType===snap.docType);
+  if(existing){
+    existing.snapshot=snap; existing.total=totals.grand; existing.customerName=snap.custName||'—'; existing.date=snap.invoiceDate;
+  }else{
+    historyCounter++;
+    invoiceHistory.unshift({id:'inv'+historyCounter+'_'+Date.now(), number:snap.invoiceNumber, docType:snap.docType, date:snap.invoiceDate, customerName:snap.custName||'—', total:totals.grand, status:'unpaid', snapshot:snap});
+  }
+  renderHistoryList();
+
+  settings.nextNumber = (parseInt(document.getElementById('invoiceNumber').value)||settings.nextNumber) + 1;
+  document.getElementById('setNextNumber').value = settings.nextNumber;
+  scheduleSave();
+  renderPreview();
+});
+
+/* ============================ clear / new invoice ============================ */
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  if(!confirm('آیا مطمئن هستید که می‌خواهید فاکتور جدید شروع شود؟ اطلاعات مشتری و اقلام فعلی پاک می‌شوند.')) return;
+  ['custName','custPhone','custPostal','custAddress','dueDate','notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('discountValue').value=0;
+  document.getElementById('taxPercent').value=9;
+  document.getElementById('taxEnabled').checked=false;
+  itemsBody.innerHTML='';
+  addItemRow();
+  confirmed=false;
+  document.getElementById('pStamp').classList.remove('show');
+  document.getElementById('invoiceDate').value = todayJalaliStr();
+  document.getElementById('invoiceNumber').value = settings.nextNumber;
+  docType='proforma';
+  btnProforma.classList.add('active'); btnInvoice.classList.remove('active');
+  renderPreview();
+  showToast('فاکتور جدید آماده است');
+});
+
+/* ============================ export actions ============================ */
+document.getElementById('printBtn').addEventListener('click', ()=> window.print());
+
+async function captureCanvas(){
+  if(document.fonts && document.fonts.ready){ try{ await document.fonts.ready; }catch(e){} }
+  const el=document.getElementById('invoice-preview');
+  // Note: foreignObjectRendering was tried here to fix Persian letter-joining, but it produced
+  // a blank page in export (likely due to the cross-origin Google Fonts stylesheet tainting the
+  // SVG snapshot). Classic rendering mode is used instead because it reliably captures content.
+  // "export-mode" strips box-shadows and in-flight animations before capture — html2canvas's
+  // classic renderer handles CSS box-shadow poorly (often as a dull gray haze over content),
+  // which is the most likely cause of the washed-out/matte look in exported PDFs and images.
+  el.classList.add('export-mode');
+  void el.offsetWidth;
+  let canvas;
+  try{
+    canvas = await html2canvas(el, {scale:2.5, backgroundColor:'#ffffff', useCORS:true, allowTaint:true, logging:false});
+  } finally {
+    el.classList.remove('export-mode');
+  }
+  return canvas;
+}
+
+document.getElementById('pdfBtn').addEventListener('click', async ()=>{
+  showToast('در حال آماده‌سازی PDF...');
+  try{
+    const canvas=await captureCanvas();
+    const { jsPDF }=window.jspdf;
+    const pdf=new jsPDF('p','mm','a4');
+    const pageWmm=210, pageHmm=297, marginMm=8;
+    const usableWmm=pageWmm-marginMm*2;
+    const usableHmm=pageHmm-marginMm*2;
+    const pxPerMm = canvas.width / usableWmm;
+    const pageHpx = Math.floor(usableHmm * pxPerMm);
+
+    let renderedPx=0, pageIndex=0;
+    while(renderedPx < canvas.height){
+      const sliceHeightPx = Math.min(pageHpx, canvas.height - renderedPx);
+      const pageCanvas=document.createElement('canvas');
+      pageCanvas.width=canvas.width;
+      pageCanvas.height=sliceHeightPx;
+      const ctx=pageCanvas.getContext('2d');
+      ctx.fillStyle='#ffffff';
+      ctx.fillRect(0,0,pageCanvas.width,pageCanvas.height);
+      ctx.drawImage(canvas, 0, renderedPx, canvas.width, sliceHeightPx, 0, 0, canvas.width, sliceHeightPx);
+      const imgData=pageCanvas.toDataURL('image/png');
+      const imgHmm = sliceHeightPx / pxPerMm;
+      if(pageIndex>0) pdf.addPage();
+      pdf.addImage(imgData,'PNG', marginMm, marginMm, usableWmm, imgHmm);
+      renderedPx += sliceHeightPx;
+      pageIndex++;
+    }
+
+    const num=document.getElementById('invoiceNumber').value || 'invoice';
+    pdf.save(`${docType==='invoice'?'فاکتور':'پیش-فاکتور'}-${num}.pdf`);
+    showToast('فایل PDF با نسبت صحیح A4 دانلود شد ✅');
+  }catch(err){
+    console.error(err);
+    showToast('خطا در ساخت PDF: '+(err && err.message ? err.message : 'دوباره تلاش کنید'));
+  }
+  closeActionBar();
+});
+
+document.getElementById('imgBtn').addEventListener('click', async ()=>{
+  showToast('در حال آماده‌سازی تصویر...');
+  try{
+    const canvas=await captureCanvas();
+    const link=document.createElement('a');
+    const num=document.getElementById('invoiceNumber').value || 'invoice';
+    link.download=`${docType==='invoice'?'فاکتور':'پیش-فاکتور'}-${num}.png`;
+    link.href=canvas.toDataURL('image/png');
+    link.click();
+    showToast('تصویر فاکتور دانلود شد ✅');
+  }catch(err){
+    console.error(err);
+    showToast('خطا در ساخت تصویر: '+(err && err.message ? err.message : 'دوباره تلاش کنید'));
+  }
+  closeActionBar();
+});
+
+document.getElementById('shareBtn').addEventListener('click', async ()=>{
+  try{
+    const canvas=await captureCanvas();
+    canvas.toBlob(async blob=>{
+      const num=document.getElementById('invoiceNumber').value || 'invoice';
+      const file=new File([blob], `فاکتور-${num}.png`, {type:'image/png'});
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        await navigator.share({files:[file], title:'فاکتور', text:'فاکتور شما'});
+      }else{
+        const link=document.createElement('a');
+        link.download=file.name;
+        link.href=URL.createObjectURL(blob);
+        link.click();
+        showToast('اشتراک‌گذاری مستقیم پشتیبانی نشد، تصویر دانلود شد');
+      }
+    });
+  }catch(err){
+    console.error(err);
+    showToast('خطا در اشتراک‌گذاری: '+(err && err.message ? err.message : ''));
+  }
+  closeActionBar();
+});
+
+/* ============================ mobile action bar toggle ============================ */
+const actionBar=document.getElementById('actionBar');
+const fabToggle=document.getElementById('fabToggle');
+function closeActionBar(){ actionBar.classList.remove('expanded'); fabToggle.classList.remove('open'); }
+fabToggle.addEventListener('click', ()=>{
+  actionBar.classList.toggle('expanded');
+  fabToggle.classList.toggle('open');
+});
+
+/* ============================ JSON database ============================ */
+function updateDbStatus(text){ document.getElementById('dbStatus').textContent = 'وضعیت: '+text; }
+
+function scheduleSave(){
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>{ writeDatabase(); }, 500);
+}
+
+async function writeDatabase(){
+  const payload = JSON.stringify({settings, history:invoiceHistory}, null, 2);
+  if(dbFileHandle){
+    try{
+      const writable=await dbFileHandle.createWritable();
+      await writable.write(payload);
+      await writable.close();
+      updateDbStatus('متصل ✅ — آخرین تغییرات ذخیره شد');
+    }catch(e){
+      console.error(e);
+      updateDbStatus('خطا در ذخیره‌سازی خودکار');
+    }
+  }
+  jsonbinAutoPush();
+}
+
+async function connectDbFile(){
+  if(!window.showSaveFilePicker){
+    showToast('مرورگر شما از اتصال زنده به فایل پشتیبانی نمی‌کند؛ از دانلود و بارگذاری دستی استفاده کنید');
+    return;
+  }
+  try{
+    const handle=await window.showSaveFilePicker({
+      suggestedName:'invoice-database.json',
+      types:[{description:'JSON Database', accept:{'application/json':['.json']}}]
+    });
+    dbFileHandle=handle;
+    try{
+      const file=await handle.getFile();
+      const text=await file.text();
+      if(text && text.trim()){
+        const obj=JSON.parse(text);
+        if(obj && (obj.settings || obj.history)){
+          if(confirm('این فایل شامل اطلاعات قبلی است. آیا بارگذاری شود؟')){
+            loadStateFromObject(obj);
+          }
+        }
+      }
+    }catch(e){ /* empty or new file, ignore */ }
+    updateDbStatus('متصل ✅ (ذخیره خودکار فعال است)');
+    scheduleSave();
+    showToast('به فایل دیتابیس متصل شدید');
+  }catch(e){
+    if(e && e.name!=='AbortError') showToast('اتصال به فایل ناموفق بود');
+  }
+}
+document.getElementById('connectDbBtn').addEventListener('click', connectDbFile);
+
+function exportDbManual(){
+  const data=JSON.stringify({settings, history:invoiceHistory}, null, 2);
+  const blob=new Blob([data], {type:'application/json'});
+  const link=document.createElement('a');
+  link.href=URL.createObjectURL(blob);
+  link.download='invoice-database.json';
+  link.click();
+  showToast('فایل دیتابیس دانلود شد');
+}
+document.getElementById('exportDbBtn').addEventListener('click', exportDbManual);
+
+document.getElementById('importDbBtnTrigger').addEventListener('click', ()=>document.getElementById('dbImportInput').click());
+document.getElementById('dbImportInput').addEventListener('change', e=>{
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const obj=JSON.parse(ev.target.result);
+      loadStateFromObject(obj);
+      showToast('اطلاعات با موفقیت بارگذاری شد');
+    }catch(err){ showToast('فایل نامعتبر است'); }
+  };
+  reader.readAsText(file);
+  e.target.value='';
+});
+
+function loadStateFromObject(obj){
+  if(obj.settings){ Object.assign(settings, obj.settings); }
+  invoiceHistory = obj.history || [];
+  updateStampRatio(()=>{ refreshAllUI(); });
+}
+
+/* ============================ jsonbin.io cloud sync ============================ */
+// window.JSONBIN_CONFIG comes from jsonbin-config.js (loaded above, may be absent).
+const JB = (window.JSONBIN_CONFIG && window.JSONBIN_CONFIG.apiKey) ? window.JSONBIN_CONFIG : null;
+if(JB && !JB.baseUrl) JB.baseUrl = 'https://api.jsonbin.io/v3';
+let jsonbinBusy = false;
+
+function updateJsonbinStatus(text){
+  const el=document.getElementById('jsonbinStatus');
+  if(el) el.textContent = '☁️ jsonbin.io: '+text;
+}
+
+function jsonbinConfigured(){ return !!(JB && JB.apiKey); }
+
+async function jsonbinPush(silent){
+  if(!jsonbinConfigured()){
+    if(!silent) showToast('ابتدا فایل jsonbin-config.js را با کلید API خود تکمیل کنید');
+    return;
+  }
+  const payload = JSON.stringify({settings, history:invoiceHistory});
+  try{
+    if(JB.binId){
+      const res = await fetch(`${JB.baseUrl}/b/${JB.binId}`, {
+        method:'PUT',
+        headers:{'Content-Type':'application/json','X-Master-Key':JB.apiKey},
+        body: payload
+      });
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      updateJsonbinStatus('متصل ✅ — آخرین تغییرات ارسال شد ('+new Date().toLocaleTimeString('fa-IR')+')');
+      if(!silent) showToast('اطلاعات در jsonbin.io ذخیره شد');
+    }else{
+      const res = await fetch(`${JB.baseUrl}/b`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-Master-Key':JB.apiKey,'X-Bin-Name':'invoice-database'},
+        body: payload
+      });
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const data = await res.json();
+      const newId = data && data.metadata && data.metadata.id;
+      JB.binId = newId;
+      updateJsonbinStatus('یک Bin جدید ساخته شد ✅');
+      showToast('Bin جدید ساخته شد. این شناسه را در jsonbin-config.js ذخیره کنید: '+newId);
+      console.log('jsonbin.io binId (save this in jsonbin-config.js):', newId);
+    }
+  }catch(e){
+    console.error(e);
+    updateJsonbinStatus('خطا در ارتباط با سرور');
+    if(!silent) showToast('خطا در ارسال به jsonbin.io: '+e.message);
+  }
+}
+
+async function jsonbinPull(silent){
+  if(!jsonbinConfigured() || !JB.binId){
+    if(!silent) showToast('ابتدا apiKey و binId را در jsonbin-config.js تنظیم کنید');
+    return;
+  }
+  try{
+    const res = await fetch(`${JB.baseUrl}/b/${JB.binId}/latest`, {
+      headers:{'X-Master-Key':JB.apiKey}
+    });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    if(data && data.record){
+      loadStateFromObject(data.record);
+      updateJsonbinStatus('متصل ✅ — اطلاعات دریافت شد');
+      if(!silent) showToast('اطلاعات از jsonbin.io بارگذاری شد');
+    }
+  }catch(e){
+    console.error(e);
+    updateJsonbinStatus('خطا در دریافت اطلاعات');
+    if(!silent) showToast('خطا در دریافت از jsonbin.io: '+e.message);
+  }
+}
+
+function jsonbinAutoPush(){
+  if(!jsonbinConfigured() || jsonbinBusy) return;
+  jsonbinBusy = true;
+  jsonbinPush(true).finally(()=>{ jsonbinBusy=false; });
+}
+
+if(jsonbinConfigured()){
+  updateJsonbinStatus(JB.binId ? 'در حال اتصال...' : 'کلید API یافت شد — با اولین ذخیره، یک Bin جدید ساخته می‌شود.');
+}else{
+  updateJsonbinStatus('فایل jsonbin-config.js بارگذاری نشده یا کلید API خالی است.');
+}
+
+document.getElementById('jsonbinPushBtn').addEventListener('click', ()=>jsonbinPush(false));
+document.getElementById('jsonbinPullBtn').addEventListener('click', ()=>jsonbinPull(false));
+
+function refreshAllUI(){
+  syncTplCardActive();
+  document.getElementById('setNextNumber').value=settings.nextNumber||1001;
+  document.getElementById('setShopName').value=settings.shopName||'';
+  document.getElementById('setShopPhone').value=settings.shopPhone||'';
+  document.getElementById('setShopEmail').value=settings.shopEmail||'';
+  document.getElementById('setShopAddress').value=settings.shopAddress||'';
+  paintUploadZone('setLogoInput','setLogoZone', settings.logo, url=>{settings.logo=url;}, ()=>{renderPreview();renderShopSummary();scheduleSave();});
+  paintUploadZone('setSignInput','setSignZone', settings.sign, url=>{settings.sign=url;}, ()=>{renderPreview();renderShopSummary();scheduleSave();});
+  paintUploadZone('setStampInput','setStampZone', settings.stamp, url=>{settings.stamp=url;}, ()=>{updateStampRatio(renderPreview);renderShopSummary();scheduleSave();});
+  renderPmList();
+  renderShopSummary();
+  renderPaymentChecklist();
+  renderHistoryList();
+  const invField=document.getElementById('invoiceNumber');
+  if(!invField.value) invField.value=settings.nextNumber;
+  renderPreview();
+}
+
+/* ============================ init ============================ */
+function initDefaults(){
+  document.getElementById('invoiceDate').value = todayJalaliStr();
+  if(itemsBody.children.length===0){ addItemRow(); }
+  refreshAllUI();
+  if(jsonbinConfigured() && JB.binId){ jsonbinPull(true); }
+}
+initDefaults();
+</script>
+</body>
+</html>
