@@ -29,10 +29,10 @@
 
 window.JSONBIN_CONFIG = {
   // کلید X-MASTER-KEY خودتان از jsonbin.io را اینجا جایگزین کنید:
-  apiKey: "PASTE_YOUR_X_MASTER_KEY_HERE",
+  apiKey: "$2a$10$K0GxG/YDDvwcCOicoQSc3OIPqPpUflP5JvKxVStM6sdQYjq4LdXKi",
 
   // شناسه Bin (در صورت نداشتن، خالی بگذارید تا خودکار ساخته شود):
-  binId: "",
+  binId: "6a858ca4da38895dfef69b28",
 
   // آدرس پایه API — نیازی به تغییر ندارد مگر اینکه jsonbin.io آن را عوض کند:
   baseUrl: "https://api.jsonbin.io/v3"
