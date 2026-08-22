@@ -257,6 +257,15 @@
   .tpl-swatch-bold{background:linear-gradient(180deg,var(--accent) 0 55%, #fff 55%);}
   .tpl-swatch-formal{background:#fff;border:2px solid var(--ink);border-radius:3px;}
 
+  /* ---------- shop tabs ---------- */
+  .shop-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+  .shop-tab{
+    padding:7px 14px;border-radius:999px;border:1.5px solid var(--line);background:#fff;
+    font-size:12px;font-weight:700;cursor:pointer;color:var(--ink-soft);transition:.2s;
+  }
+  .shop-tab:hover{border-color:rgba(var(--accent-rgb),.5);}
+  .shop-tab.active{border-color:var(--accent);background:rgba(var(--accent-rgb),.12);color:var(--accent-dark);}
+
   /* ---------- history cards ---------- */
   .history-card{
     display:flex;flex-direction:column;gap:8px;padding:12px;background:var(--cloud);
@@ -521,7 +530,6 @@
       <button class="swatch" data-color="#5B6EE1" data-dark="#4152b8" data-rgb="91,110,225" style="background:#5B6EE1" title="بنفش"></button>
     </div>
     <button class="settings-btn" id="openHistoryBtn">📜 سوابق</button>
-    <button class="settings-btn" id="openDbBtn">🗄️ دیتابیس</button>
     <button class="settings-btn" id="openSettingsBtn">⚙️ تنظیمات</button>
   </div>
 </div>
@@ -534,6 +542,7 @@
     <div class="accordion-section open">
       <div class="accordion-head"><span class="icon">🏪</span> اطلاعات فروشگاه <span class="chev">⌄</span></div>
       <div class="accordion-body">
+        <div class="shop-tabs" id="formShopTabs"></div>
         <div id="shopSummary"></div>
         <button class="link-btn" id="editShopFromForm">ویرایش اطلاعات فروشگاه در تنظیمات ⚙</button>
       </div>
@@ -570,6 +579,8 @@
           <tbody id="itemsBody"></tbody>
         </table>
         <button class="add-row-btn" id="addRowBtn">＋ افزودن ردیف جدید</button>
+        <datalist id="itemCatalogList"></datalist>
+        <div class="hint">هنگام تایپ نام کالا، موارد مشابه از فاکتورهای قبلی پیشنهاد داده می‌شود.</div>
       </div>
     </div>
 
@@ -710,17 +721,6 @@
     <div class="modal-body">
 
       <div class="accordion-section open">
-        <div class="accordion-head"><span class="icon">🔢</span> شماره‌گذاری فاکتور <span class="chev">⌄</span></div>
-        <div class="accordion-body">
-          <div class="field">
-            <label>شماره فاکتور بعدی</label>
-            <input type="number" id="setNextNumber" min="1">
-            <div class="hint">فاکتورهای جدید از این شماره شروع می‌شوند و پس از هر تایید، به‌صورت خودکار افزایش می‌یابد.</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="accordion-section open">
         <div class="accordion-head"><span class="icon">🎨</span> قالب و گرافیک فاکتور <span class="chev">⌄</span></div>
         <div class="accordion-body">
           <div class="tpl-grid" id="tplGrid">
@@ -734,7 +734,16 @@
       </div>
 
       <div class="accordion-section open">
-        <div class="accordion-head"><span class="icon">🏪</span> اطلاعات فروشنده <span class="chev">⌄</span></div>
+        <div class="accordion-head"><span class="icon">🏬</span> فروشگاه‌ها <span class="chev">⌄</span></div>
+        <div class="accordion-body">
+          <div class="shop-tabs" id="shopTabs"></div>
+          <button class="pm-add-btn" id="addShopBtn">＋ افزودن فروشگاه جدید</button>
+          <div class="hint">هر فروشگاه اطلاعات، لوگو، امضا، مهر، شماره‌های پرداخت و شماره‌گذاری فاکتور جداگانه دارد. با انتخاب یک فروشگاه از بالا، بخش‌های زیر برای همان فروشگاه نمایش داده می‌شود.</div>
+        </div>
+      </div>
+
+      <div class="accordion-section open">
+        <div class="accordion-head"><span class="icon">🏪</span> اطلاعات فروشگاه انتخاب‌شده <span class="chev">⌄</span></div>
         <div class="accordion-body">
           <div class="field"><label>نام فروشگاه</label><input type="text" id="setShopName" placeholder="مثلاً: فروشگاه گل‌بهار"></div>
           <div class="row2">
@@ -742,11 +751,17 @@
             <div class="field"><label>ایمیل (اختیاری)</label><input type="text" id="setShopEmail" placeholder="shop@mail.com"></div>
           </div>
           <div class="field"><label>آدرس</label><input type="text" id="setShopAddress" placeholder="آدرس فروشگاه"></div>
+          <div class="field">
+            <label>شماره فاکتور بعدی (مخصوص همین فروشگاه)</label>
+            <input type="number" id="setNextNumber" min="1">
+            <div class="hint">فاکتورهای جدید این فروشگاه از این شماره شروع می‌شوند و پس از هر تایید، خودکار افزایش می‌یابد.</div>
+          </div>
+          <button class="link-btn" id="deleteShopBtn" style="color:var(--anar);">🗑 حذف این فروشگاه</button>
         </div>
       </div>
 
       <div class="accordion-section open">
-        <div class="accordion-head"><span class="icon">🖼️</span> لوگو، امضا و مهر <span class="chev">⌄</span></div>
+        <div class="accordion-head"><span class="icon">🖼️</span> لوگو، امضا و مهر فروشگاه انتخاب‌شده <span class="chev">⌄</span></div>
         <div class="accordion-body">
           <div class="upload-grid">
             <div class="field">
@@ -776,7 +791,7 @@
       </div>
 
       <div class="accordion-section open">
-        <div class="accordion-head"><span class="icon">💳</span> شماره کارت‌ها و شماره‌های شبا <span class="chev">⌄</span></div>
+        <div class="accordion-head"><span class="icon">💳</span> شماره کارت‌ها و شماره‌های شبای این فروشگاه <span class="chev">⌄</span></div>
         <div class="accordion-body">
           <div id="pmList"></div>
           <div class="toggle-pair">
@@ -788,6 +803,11 @@
           <div class="row2">
             <div class="field"><label>نام بانک</label><input type="text" id="setBankName" placeholder="مثلاً: بانک ملت"></div>
             <div class="field"><label>صاحب حساب</label><input type="text" id="setAccountHolder" placeholder="نام صاحب حساب"></div>
+          </div>
+          <div class="field">
+            <label>نام مستعار (اختیاری)</label>
+            <input type="text" id="setPmNickname" placeholder="مثلاً: حساب شخصی من">
+            <div class="hint">این نام فقط هنگام انتخاب حساب در فرم صدور فاکتور دیده می‌شود و روی فاکتور نهایی چاپ نمی‌شود.</div>
           </div>
           <button class="pm-add-btn" id="pmAddBtn">＋ افزودن به لیست</button>
         </div>
@@ -808,47 +828,16 @@
   </div>
 </div>
 
-<!-- ============ DATABASE MODAL ============ -->
-<div class="modal-overlay" id="dbOverlay">
-  <div class="modal-box">
-    <div class="modal-head">
-      <h2>🗄️ دیتابیس اطلاعات (JSON)</h2>
-      <button class="modal-close" id="closeDbBtn">✕</button>
-    </div>
-    <div class="modal-body modal-pad">
-      <div class="hint" id="dbStatus" style="margin-bottom:14px;">وضعیت: متصل نیست — اطلاعات فقط در همین نشست مرورگر نگه‌داری می‌شود.</div>
-
-      <button class="pm-add-btn" id="connectDbBtn">📁 انتخاب یا ساخت فایل دیتابیس (ذخیره خودکار)</button>
-      <div class="hint" style="margin-bottom:16px;">این گزینه فقط در مرورگرهای مبتنی بر Chrome/Edge کار می‌کند. به‌دلیل محدودیت‌های امنیتی مرورگرها، هر بار که این صفحه را دوباره باز می‌کنید، لازم است یک‌بار روی همین دکمه بزنید و فایل دیتابیس خود را انتخاب کنید؛ پس از آن تا زمانی که صفحه باز است، همه چیز به‌صورت خودکار در همان فایل ذخیره می‌شود.</div>
-
-      <div class="row2">
-        <button class="pm-add-btn" id="exportDbBtn" style="background:var(--accent-dark);">⬇️ دانلود نسخه پشتیبان</button>
-        <button class="pm-add-btn" id="importDbBtnTrigger" style="background:var(--ink-soft);">⬆️ بارگذاری از فایل</button>
-      </div>
-      <input type="file" id="dbImportInput" accept="application/json" style="display:none;">
-      <div class="hint" style="margin-top:10px;">روش دانلود/بارگذاری دستی در همهٔ مرورگرها کار می‌کند و برای پشتیبان‌گیری یا انتقال اطلاعات به سیستم دیگر مناسب است.</div>
-
-      <div style="height:1px;background:var(--line);margin:18px 0;"></div>
-
-      <div class="hint" id="jsonbinStatus" style="margin-bottom:12px;">☁️ jsonbin.io: فایل jsonbin-config.js بارگذاری نشده است.</div>
-      <div class="row2">
-        <button class="pm-add-btn" id="jsonbinPullBtn" style="background:var(--accent-dark);">⬇️ دریافت از jsonbin.io</button>
-        <button class="pm-add-btn" id="jsonbinPushBtn" style="background:var(--ink);">⬆️ ارسال به jsonbin.io</button>
-      </div>
-      <div class="hint" style="margin-top:10px;">
-        برای فعال‌سازی، فایل <b>jsonbin-config.js</b> (همراه همین فاکتور ارسال شده) را باز کنید، کلید API و شناسه Bin خود را از سایت jsonbin.io در آن قرار دهید و آن را کنار فایل html نگه دارید. با این کار، اطلاعات هر بار که این صفحه باز می‌شود به‌صورت خودکار از jsonbin.io خوانده می‌شود و با هر تغییری خودکار در آن ذخیره می‌شود — بدون نیاز به انتخاب فایل در هر بار.
-      </div>
-    </div>
-  </div>
-</div>
+<!-- (local database modal removed — jsonbin.io is now the only sync mechanism) -->
 
 
 <!--
   jsonbin-config.js must sit next to this HTML file (same folder).
   It defines window.JSONBIN_CONFIG with your jsonbin.io API key and bin ID.
-  If the file is missing, the app simply falls back to local-only storage — nothing breaks.
+  jsonbin.io is the only place data is saved — without a valid config file,
+  the app will show an error toast on load and will not be able to save changes.
 -->
-<script src="jsonbin-config.js" onerror="console.warn('jsonbin-config.js not found — cloud sync disabled, local storage still works.')"></script>
+<script src="jsonbin-config.js" onerror="console.warn('jsonbin-config.js not found next to this HTML file — data cannot be saved or loaded until it is added.')"></script>
 
 <script>
 /* ============================ helpers ============================ */
@@ -952,18 +941,58 @@ let itemCounter=0;
 let confirmed=false;
 let pmCounter=0;
 let historyCounter=0;
-let dbFileHandle=null;
+let shopCounter=0;
 let saveTimer=null;
 
+function escapeHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function makeEmptyShop(name){
+  shopCounter++;
+  return {
+    id:'shop'+shopCounter+'_'+Date.now(),
+    name: name || 'فروشگاه جدید',
+    phone:'', email:'', address:'',
+    logo:null, sign:null, stamp:null, stampRatio:1,
+    nextNumber:1001,
+    payments:[] // {id, type:'card'|'iban', number, bank, holder, nickname}
+  };
+}
+
 const settings = {
-  nextNumber: 1001,
+  activeShopId: null,
   template: 'classic', // classic | minimal | bold | formal
-  shopName:'', shopPhone:'', shopEmail:'', shopAddress:'',
-  logo:null, sign:null, stamp:null, stampRatio:1,
-  payments:[] // {id, type:'card'|'iban', number, bank, holder}
+  shops: [] // each: {id, name, phone, email, address, logo, sign, stamp, stampRatio, nextNumber, payments}
 };
 
-let invoiceHistory = []; // {id, number, docType, date, customerName, total, status, snapshot}
+function ensureAtLeastOneShop(){
+  if(!settings.shops || settings.shops.length===0){
+    const s=makeEmptyShop('فروشگاه من');
+    settings.shops=[s];
+    settings.activeShopId=s.id;
+  }
+  if(!settings.activeShopId || !settings.shops.find(s=>s.id===settings.activeShopId)){
+    settings.activeShopId=settings.shops[0].id;
+  }
+}
+function getActiveShop(){
+  return settings.shops.find(s=>s.id===settings.activeShopId) || settings.shops[0];
+}
+
+// Catalog of previously used item descriptions (for autocomplete while typing items).
+// Built automatically from every item ever entered, grows over time, saved with the database.
+let itemCatalog = []; // [{desc, price}]
+function rememberCatalogItem(desc, price){
+  desc=(desc||'').trim();
+  if(!desc) return;
+  const existing=itemCatalog.find(x=>x.desc===desc);
+  if(existing){ if(price) existing.price=price; }
+  else{ itemCatalog.push({desc, price:price||0}); }
+  if(itemCatalog.length>500) itemCatalog=itemCatalog.slice(-500);
+}
+
+let invoiceHistory = []; // {id, number, docType, date, customerName, shopId, shopName, total, status, snapshot}
 
 const toggles = { name:true, phone:true, address:true, logo:true, sign:true, stamp:true };
 let selectedPayIds = new Set();
@@ -1029,8 +1058,6 @@ function closeHistory(){ closeModal('historyOverlay'); }
 document.getElementById('openHistoryBtn').addEventListener('click', openHistory);
 document.getElementById('closeHistoryBtn').addEventListener('click', closeHistory);
 
-document.getElementById('openDbBtn').addEventListener('click', ()=>openModal('dbOverlay'));
-document.getElementById('closeDbBtn').addEventListener('click', ()=>closeModal('dbOverlay'));
 
 /* ============================ generic upload helper ============================ */
 function setupUpload(inputId, zoneId, onLoaded, afterChange){
@@ -1072,29 +1099,66 @@ function paintUploadZone(inputId, zoneId, dataUrl, onLoaded, afterChange){
 }
 
 function updateStampRatio(cb){
-  if(settings.stamp){
+  const shop=getActiveShop();
+  if(shop.stamp){
     const img=new Image();
     img.onload=()=>{
-      settings.stampRatio = (img.naturalWidth && img.naturalHeight) ? (img.naturalWidth/img.naturalHeight) : 1;
+      shop.stampRatio = (img.naturalWidth && img.naturalHeight) ? (img.naturalWidth/img.naturalHeight) : 1;
       if(cb) cb();
     };
-    img.onerror=()=>{ settings.stampRatio=1; if(cb) cb(); };
-    img.src=settings.stamp;
+    img.onerror=()=>{ shop.stampRatio=1; if(cb) cb(); };
+    img.src=shop.stamp;
   }else{
-    settings.stampRatio=1;
+    shop.stampRatio=1;
     if(cb) cb();
   }
 }
 
-setupUpload('setLogoInput','setLogoZone', url=>{ settings.logo=url; }, ()=>{ renderPreview(); renderShopSummary(); scheduleSave(); });
-setupUpload('setSignInput','setSignZone', url=>{ settings.sign=url; }, ()=>{ renderPreview(); renderShopSummary(); scheduleSave(); });
-setupUpload('setStampInput','setStampZone', url=>{ settings.stamp=url; }, ()=>{ updateStampRatio(renderPreview); renderShopSummary(); scheduleSave(); });
+setupUpload('setLogoInput','setLogoZone', url=>{ getActiveShop().logo=url; }, ()=>{ renderPreview(); renderShopSummary(); scheduleSave(); });
+setupUpload('setSignInput','setSignZone', url=>{ getActiveShop().sign=url; }, ()=>{ renderPreview(); renderShopSummary(); scheduleSave(); });
+setupUpload('setStampInput','setStampZone', url=>{ getActiveShop().stamp=url; }, ()=>{ updateStampRatio(renderPreview); renderShopSummary(); scheduleSave(); });
 
-/* ============================ settings: shop fields ============================ */
+/* ============================ settings: shop list + fields ============================ */
+function renderShopTabs(){
+  const html = settings.shops.map(s=>
+    `<button type="button" class="shop-tab${s.id===settings.activeShopId?' active':''}" data-shop="${s.id}">${escapeHtml(s.name||'بدون نام')}</button>`
+  ).join('');
+  ['shopTabs','formShopTabs'].forEach(containerId=>{
+    const wrap=document.getElementById(containerId);
+    if(!wrap) return;
+    wrap.innerHTML=html;
+    wrap.querySelectorAll('.shop-tab').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        settings.activeShopId=btn.dataset.shop;
+        refreshAllUI();
+        scheduleSave();
+      });
+    });
+  });
+}
+document.getElementById('addShopBtn').addEventListener('click', ()=>{
+  const s=makeEmptyShop('فروشگاه '+(settings.shops.length+1));
+  settings.shops.push(s);
+  settings.activeShopId=s.id;
+  refreshAllUI();
+  scheduleSave();
+  showToast('فروشگاه جدید اضافه شد — اطلاعاتش را در پایین همین صفحه تکمیل کنید');
+});
+document.getElementById('deleteShopBtn').addEventListener('click', ()=>{
+  if(settings.shops.length<=1){ showToast('باید حداقل یک فروشگاه باقی بماند'); return; }
+  if(!confirm('این فروشگاه حذف شود؟ فاکتورهای قبلی آن در سوابق باقی می‌مانند.')) return;
+  settings.shops=settings.shops.filter(s=>s.id!==settings.activeShopId);
+  settings.activeShopId=settings.shops[0].id;
+  refreshAllUI();
+  scheduleSave();
+  showToast('فروشگاه حذف شد');
+});
+
 ['setShopName','setShopPhone','setShopEmail','setShopAddress'].forEach(id=>{
   document.getElementById(id).addEventListener('input', e=>{
-    const map={setShopName:'shopName',setShopPhone:'shopPhone',setShopEmail:'shopEmail',setShopAddress:'shopAddress'};
-    settings[map[id]]=e.target.value;
+    const map={setShopName:'name',setShopPhone:'phone',setShopEmail:'email',setShopAddress:'address'};
+    getActiveShop()[map[id]]=e.target.value;
+    if(id==='setShopName') renderShopTabs();
     renderShopSummary();
     renderPreview();
     scheduleSave();
@@ -1102,7 +1166,7 @@ setupUpload('setStampInput','setStampZone', url=>{ settings.stamp=url; }, ()=>{ 
 });
 document.getElementById('setNextNumber').addEventListener('input', e=>{
   const v=parseInt(e.target.value)||1;
-  settings.nextNumber=v;
+  getActiveShop().nextNumber=v;
   scheduleSave();
 });
 
@@ -1129,15 +1193,17 @@ document.getElementById('pmAddBtn').addEventListener('click', ()=>{
   const number = newPmType==='card' ? document.getElementById('setCardNumber').value : document.getElementById('setIbanNumber').value;
   const bank=document.getElementById('setBankName').value;
   const holder=document.getElementById('setAccountHolder').value;
+  const nickname=document.getElementById('setPmNickname').value;
   if(!number.trim()){ showToast('لطفاً شماره کارت یا شبا را وارد کنید'); return; }
   pmCounter++;
-  const entry={ id:'pm'+pmCounter+'_'+Date.now(), type:newPmType, number, bank, holder };
-  settings.payments.push(entry);
+  const entry={ id:'pm'+pmCounter+'_'+Date.now(), type:newPmType, number, bank, holder, nickname };
+  getActiveShop().payments.push(entry);
   selectedPayIds.add(entry.id);
   document.getElementById('setCardNumber').value='';
   document.getElementById('setIbanNumber').value='';
   document.getElementById('setBankName').value='';
   document.getElementById('setAccountHolder').value='';
+  document.getElementById('setPmNickname').value='';
   renderPmList();
   renderPaymentChecklist();
   renderPreview();
@@ -1147,18 +1213,20 @@ document.getElementById('pmAddBtn').addEventListener('click', ()=>{
 
 function renderPmList(){
   const wrap=document.getElementById('pmList');
-  if(settings.payments.length===0){
+  const payments=getActiveShop().payments;
+  if(payments.length===0){
     wrap.innerHTML='<div class="empty-note">هنوز شماره‌ای اضافه نشده است.</div>';
     return;
   }
   wrap.innerHTML='';
-  settings.payments.forEach(pm=>{
+  payments.forEach(pm=>{
     const div=document.createElement('div');
     div.className='pm-list-item';
     const label = pm.type==='card' ? 'شماره کارت' : 'شماره شبا';
-    div.innerHTML=`<div class="pm-text"><b>${label}: ${toFa(pm.number)}</b><span>${pm.bank||''}${pm.bank&&pm.holder?' · ':''}${pm.holder||''}</span></div><button class="pm-del" type="button">✕</button>`;
+    const nickPart = pm.nickname ? `<b style="color:var(--accent-dark)">${escapeHtml(pm.nickname)}</b> — ` : '';
+    div.innerHTML=`<div class="pm-text">${nickPart}<b>${label}: ${toFa(pm.number)}</b><span>${escapeHtml(pm.bank||'')}${pm.bank&&pm.holder?' · ':''}${escapeHtml(pm.holder||'')}</span></div><button class="pm-del" type="button">✕</button>`;
     div.querySelector('.pm-del').addEventListener('click', ()=>{
-      settings.payments=settings.payments.filter(p=>p.id!==pm.id);
+      getActiveShop().payments=getActiveShop().payments.filter(p=>p.id!==pm.id);
       selectedPayIds.delete(pm.id);
       renderPmList();
       renderPaymentChecklist();
@@ -1172,33 +1240,34 @@ function renderPmList(){
 /* ============================ main form: shop summary + toggles ============================ */
 function renderShopSummary(){
   const wrap=document.getElementById('shopSummary');
+  const shop=getActiveShop();
   const rows=[];
   rows.push(`<div class="ro-item">
     <input type="checkbox" id="tgLogo" ${toggles.logo?'checked':''}>
-    ${settings.logo?`<img class="ro-thumb" src="${settings.logo}">`:'<div class="ro-thumb"></div>'}
-    <div class="ro-text"><b>لوگو</b><small>${settings.logo?'آپلود شده':'در تنظیمات آپلود نشده'}</small></div>
+    ${shop.logo?`<img class="ro-thumb" src="${shop.logo}">`:'<div class="ro-thumb"></div>'}
+    <div class="ro-text"><b>لوگو</b><small>${shop.logo?'آپلود شده':'در تنظیمات آپلود نشده'}</small></div>
   </div>`);
   rows.push(`<div class="ro-item">
     <input type="checkbox" id="tgName" ${toggles.name?'checked':''}>
-    <div class="ro-text"><b>${settings.shopName||'<span class="ro-empty">نام فروشگاه وارد نشده</span>'}</b><small>نام فروشگاه</small></div>
+    <div class="ro-text"><b>${escapeHtml(shop.name)||'<span class="ro-empty">نام فروشگاه وارد نشده</span>'}</b><small>نام فروشگاه</small></div>
   </div>`);
   rows.push(`<div class="ro-item">
     <input type="checkbox" id="tgPhone" ${toggles.phone?'checked':''}>
-    <div class="ro-text"><b>${settings.shopPhone||'<span class="ro-empty">وارد نشده</span>'}</b><small>شماره تماس</small></div>
+    <div class="ro-text"><b>${escapeHtml(shop.phone)||'<span class="ro-empty">وارد نشده</span>'}</b><small>شماره تماس</small></div>
   </div>`);
   rows.push(`<div class="ro-item">
     <input type="checkbox" id="tgAddress" ${toggles.address?'checked':''}>
-    <div class="ro-text"><b>${settings.shopAddress||'<span class="ro-empty">وارد نشده</span>'}</b><small>آدرس</small></div>
+    <div class="ro-text"><b>${escapeHtml(shop.address)||'<span class="ro-empty">وارد نشده</span>'}</b><small>آدرس</small></div>
   </div>`);
   rows.push(`<div class="ro-item">
     <input type="checkbox" id="tgSign" ${toggles.sign?'checked':''}>
-    ${settings.sign?`<img class="ro-thumb" src="${settings.sign}">`:'<div class="ro-thumb"></div>'}
-    <div class="ro-text"><b>امضا</b><small>${settings.sign?'آپلود شده':'در تنظیمات آپلود نشده'}</small></div>
+    ${shop.sign?`<img class="ro-thumb" src="${shop.sign}">`:'<div class="ro-thumb"></div>'}
+    <div class="ro-text"><b>امضا</b><small>${shop.sign?'آپلود شده':'در تنظیمات آپلود نشده'}</small></div>
   </div>`);
   rows.push(`<div class="ro-item">
     <input type="checkbox" id="tgStamp" ${toggles.stamp?'checked':''}>
-    ${settings.stamp?`<img class="ro-thumb" src="${settings.stamp}">`:'<div class="ro-thumb"></div>'}
-    <div class="ro-text"><b>مهر</b><small>${settings.stamp?'آپلود شده':'مهر گرافیکی پیش‌فرض استفاده می‌شود'}</small></div>
+    ${shop.stamp?`<img class="ro-thumb" src="${shop.stamp}">`:'<div class="ro-thumb"></div>'}
+    <div class="ro-text"><b>مهر</b><small>${shop.stamp?'آپلود شده':'مهر گرافیکی پیش‌فرض استفاده می‌شود'}</small></div>
   </div>`);
   wrap.innerHTML=rows.join('');
   ['tgLogo','tgName','tgPhone','tgAddress','tgSign','tgStamp'].forEach(id=>{
@@ -1213,17 +1282,19 @@ function renderShopSummary(){
 /* ============================ main form: payment checklist ============================ */
 function renderPaymentChecklist(){
   const wrap=document.getElementById('paymentChecklist');
-  if(settings.payments.length===0){
+  const payments=getActiveShop().payments;
+  if(payments.length===0){
     wrap.innerHTML='<div class="empty-note">روش پرداختی ثبت نشده — از منوی تنظیمات اضافه کنید.</div>';
     return;
   }
   wrap.innerHTML='';
-  settings.payments.forEach(pm=>{
+  payments.forEach(pm=>{
     const label = pm.type==='card' ? 'شماره کارت' : 'شماره شبا';
+    const nickPart = pm.nickname ? `<b style="color:var(--accent-dark)">${escapeHtml(pm.nickname)}</b> — ` : '';
     const row=document.createElement('label');
     row.className='pay-check-item';
     row.innerHTML=`<input type="checkbox" ${selectedPayIds.has(pm.id)?'checked':''}>
-      <div class="pc-text"><b>${label}: ${toFa(pm.number)}</b><span>${pm.bank||''}${pm.bank&&pm.holder?' · ':''}${pm.holder||''}</span></div>`;
+      <div class="pc-text">${nickPart}<b>${label}: ${toFa(pm.number)}</b><span>${escapeHtml(pm.bank||'')}${pm.bank&&pm.holder?' · ':''}${escapeHtml(pm.holder||'')}</span></div>`;
     row.querySelector('input').addEventListener('change', e=>{
       if(e.target.checked) selectedPayIds.add(pm.id); else selectedPayIds.delete(pm.id);
       renderPreview();
@@ -1239,7 +1310,7 @@ function addItemRow(data){
   const tr=document.createElement('tr');
   const d = data || {};
   tr.innerHTML=`
-    <td><input class="desc" type="text" data-role="desc" placeholder="نام کالا یا خدمت" value="${d.desc?String(d.desc).replace(/"/g,'&quot;'):''}"></td>
+    <td><input class="desc" type="text" data-role="desc" list="itemCatalogList" autocomplete="off" placeholder="نام کالا یا خدمت" value="${d.desc?String(d.desc).replace(/"/g,'&quot;'):''}"></td>
     <td><input type="number" min="0" data-role="qty" placeholder="۱" value="${d.qty?d.qty:''}" style="width:100%"></td>
     <td><input type="number" min="0" data-role="price" placeholder="۰" value="${d.price?d.price:''}" style="width:100%"></td>
     <td class="line-total" data-role="total">۰</td>
@@ -1251,10 +1322,27 @@ function addItemRow(data){
     inp.addEventListener('focus', ()=>inp.select());
     inp.addEventListener('input', renderPreview);
   });
-  tr.querySelector('[data-role=desc]').addEventListener('focus', function(){ this.select(); });
-  tr.querySelector('[data-role=desc]').addEventListener('input', renderPreview);
+  const descInput=tr.querySelector('[data-role=desc]');
+  descInput.addEventListener('focus', function(){ this.select(); });
+  descInput.addEventListener('input', renderPreview);
+  // When a suggestion is picked from the catalog (or the user finishes typing an existing
+  // item's exact name), auto-fill its last used price if the price field is still empty.
+  descInput.addEventListener('change', function(){
+    const match=itemCatalog.find(x=>x.desc===this.value.trim());
+    const priceInput=tr.querySelector('[data-role=price]');
+    if(match && match.price && !priceInput.value){
+      priceInput.value=match.price;
+      renderPreview();
+    }
+  });
 }
 document.getElementById('addRowBtn').addEventListener('click', ()=>addItemRow());
+
+function renderItemCatalogList(){
+  const dl=document.getElementById('itemCatalogList');
+  if(!dl) return;
+  dl.innerHTML = itemCatalog.map(x=>`<option value="${escapeHtml(x.desc)}">`).join('');
+}
 
 function getItemsFromForm(){
   return [...itemsBody.querySelectorAll('tr')].map(tr=>({
@@ -1292,14 +1380,15 @@ document.getElementById('taxPercent').addEventListener('focus', function(){ this
 /* ============================ render invoice preview ============================ */
 function renderPreview(){
   applyTemplateClass();
-  document.getElementById('pShopName').textContent = toggles.name ? (settings.shopName || 'نام فروشگاه شما') : '';
+  const shop=getActiveShop();
+  document.getElementById('pShopName').textContent = toggles.name ? (shop.name || 'نام فروشگاه شما') : '';
   document.getElementById('pShopName').style.display = toggles.name ? 'block':'none';
   const metaParts=[];
-  if(toggles.phone && settings.shopPhone) metaParts.push(settings.shopPhone);
-  if(toggles.address && settings.shopAddress) metaParts.push(settings.shopAddress);
+  if(toggles.phone && shop.phone) metaParts.push(shop.phone);
+  if(toggles.address && shop.address) metaParts.push(shop.address);
   document.getElementById('pShopMeta').textContent = metaParts.join(' · ') || (toggles.phone||toggles.address ? 'شماره تماس · آدرس فروشگاه' : '');
   const logoBox=document.getElementById('previewLogoBox');
-  logoBox.innerHTML = (toggles.logo && settings.logo) ? `<img src="${settings.logo}">` : `<span class="ph">🏪</span>`;
+  logoBox.innerHTML = (toggles.logo && shop.logo) ? `<img src="${shop.logo}">` : `<span class="ph">🏪</span>`;
 
   const badge=document.getElementById('docBadge');
   const wm=document.getElementById('watermarkEl');
@@ -1323,12 +1412,13 @@ function renderPreview(){
     const total=(it.qty||0)*(it.price||0);
     tr.querySelector('[data-role=total]').textContent=fmtNum(total);
     const ptr=document.createElement('tr');
-    ptr.innerHTML=`<td class="desc-cell">${it.desc||'کالا/خدمت'}</td><td>${toFa(it.qty)}</td><td>${fmtNum(it.price)}</td><td>${fmtNum(total)}</td>`;
+    ptr.innerHTML=`<td class="desc-cell">${escapeHtml(it.desc)||'کالا/خدمت'}</td><td>${toFa(it.qty)}</td><td>${fmtNum(it.price)}</td><td>${fmtNum(total)}</td>`;
     pBody.appendChild(ptr);
   });
   if(rows.length===0){
     pBody.innerHTML='<tr><td colspan="4" style="color:#9aa4b8;padding:16px;">ردیفی اضافه نشده است</td></tr>';
   }
+  renderItemCatalogList();
 
   const discVal=parseFloat(document.getElementById('discountValue').value)||0;
   const taxOn=document.getElementById('taxEnabled').checked;
@@ -1348,30 +1438,32 @@ function renderPreview(){
   document.getElementById('pNotes').textContent=notes;
 
   const payWrap=document.getElementById('pPayLines');
-  const chosen=settings.payments.filter(p=>selectedPayIds.has(p.id));
+  const chosen=shop.payments.filter(p=>selectedPayIds.has(p.id));
   if(chosen.length===0){
     payWrap.innerHTML='<div class="pay-line"><span>—</span></div>';
   }else{
+    // Note: the payment nickname is intentionally left out here — it's only for picking
+    // the right account while issuing the invoice, never printed on the final document.
     payWrap.innerHTML=chosen.map(pm=>{
       const label = pm.type==='card' ? 'شماره کارت' : 'شماره شبا';
-      const holderLine = pm.holder ? `<div class="pay-line"><b>صاحب حساب</b><span>${pm.holder}</span></div>` : '';
-      const bankLine = pm.bank ? `<div class="pay-line"><b>بانک</b><span>${pm.bank}</span></div>` : '';
+      const holderLine = pm.holder ? `<div class="pay-line"><b>صاحب حساب</b><span>${escapeHtml(pm.holder)}</span></div>` : '';
+      const bankLine = pm.bank ? `<div class="pay-line"><b>بانک</b><span>${escapeHtml(pm.bank)}</span></div>` : '';
       return `${bankLine}<div class="pay-line"><b>${label}</b><span class="pay-number">${toFa(pm.number)}</span></div>${holderLine}`;
     }).join('');
   }
 
   const signImg=document.getElementById('pSignImg');
-  if(toggles.sign && settings.sign){ signImg.src=settings.sign; signImg.style.display='block'; } else { signImg.style.display='none'; }
-  document.getElementById('stampShopText').textContent = (settings.shopName || 'فروشگاه') + ' ★ ';
+  if(toggles.sign && shop.sign){ signImg.src=shop.sign; signImg.style.display='block'; } else { signImg.style.display='none'; }
+  document.getElementById('stampShopText').textContent = (shop.name || 'فروشگاه') + ' ★ ';
 
   const stampEl=document.getElementById('pStamp');
   const stampSvg=document.getElementById('pStampSvg');
   const stampImg=document.getElementById('pStampImg');
-  if(settings.stamp){
+  if(shop.stamp){
     stampSvg.style.display='none';
     stampImg.style.display='block';
-    stampImg.src=settings.stamp;
-    const ratio = settings.stampRatio || 1;
+    stampImg.src=shop.stamp;
+    const ratio = shop.stampRatio || 1;
     const h=104;
     let w=Math.round(h*ratio);
     w=Math.max(55, Math.min(190, w));
@@ -1394,6 +1486,7 @@ function renderPreview(){
 function collectCurrentSnapshot(){
   return {
     docType,
+    shopId: settings.activeShopId,
     invoiceNumber: document.getElementById('invoiceNumber').value,
     invoiceDate: document.getElementById('invoiceDate').value,
     dueDate: document.getElementById('dueDate').value,
@@ -1417,6 +1510,9 @@ function loadSnapshotIntoForm(h){
   docType=s.docType;
   if(docType==='invoice'){ btnInvoice.classList.add('active'); btnProforma.classList.remove('active'); }
   else{ btnProforma.classList.add('active'); btnInvoice.classList.remove('active'); }
+  if(s.shopId && settings.shops.find(sh=>sh.id===s.shopId)){
+    settings.activeShopId = s.shopId;
+  }
   document.getElementById('invoiceNumber').value=s.invoiceNumber;
   document.getElementById('invoiceDate').value=s.invoiceDate;
   document.getElementById('dueDate').value=s.dueDate;
@@ -1442,6 +1538,7 @@ function loadSnapshotIntoForm(h){
 
   /* editable: unlock the confirm button so changes can be saved back */
   confirmed=false;
+  renderShopTabs();
   renderShopSummary();
   renderPaymentChecklist();
   renderPreview();
@@ -1463,9 +1560,10 @@ function renderHistoryList(){
     const statusClass = h.status==='settled' ? 'status-settled' : 'status-unpaid';
     const statusText = h.status==='settled' ? 'تسویه شده ✅' : 'در انتظار تسویه';
     const typeText = h.docType==='invoice' ? 'فاکتور فروش' : 'پیش‌فاکتور';
+    const shopPart = h.shopName ? `${escapeHtml(h.shopName)} · ` : '';
     card.innerHTML=`
       <div class="history-top">
-        <div class="ht-text"><b>${typeText} #${toFa(h.number)}</b><span>${h.date||''} · ${h.customerName||'—'}</span></div>
+        <div class="ht-text"><b>${typeText} #${toFa(h.number)}</b><span>${shopPart}${h.date||''} · ${escapeHtml(h.customerName)||'—'}</span></div>
         <div class="history-total">${fmtMoney(h.total)}</div>
       </div>
       <div class="history-bottom">
@@ -1503,17 +1601,20 @@ document.getElementById('confirmBtn').addEventListener('click', ()=>{
 
   const snap=collectCurrentSnapshot();
   const totals=computeTotals(snap.items, snap.discountType, snap.discountValue, snap.taxEnabled, snap.taxPercent);
-  let existing=invoiceHistory.find(x=>x.number===snap.invoiceNumber && x.docType===snap.docType);
+  snap.items.forEach(it=>{ if(it.desc && it.desc.trim()) rememberCatalogItem(it.desc, it.price); });
+  renderItemCatalogList();
+  const shop = settings.shops.find(s=>s.id===snap.shopId) || getActiveShop();
+  let existing=invoiceHistory.find(x=>x.number===snap.invoiceNumber && x.docType===snap.docType && x.shopId===snap.shopId);
   if(existing){
-    existing.snapshot=snap; existing.total=totals.grand; existing.customerName=snap.custName||'—'; existing.date=snap.invoiceDate;
+    existing.snapshot=snap; existing.total=totals.grand; existing.customerName=snap.custName||'—'; existing.date=snap.invoiceDate; existing.shopName=shop.name;
   }else{
     historyCounter++;
-    invoiceHistory.unshift({id:'inv'+historyCounter+'_'+Date.now(), number:snap.invoiceNumber, docType:snap.docType, date:snap.invoiceDate, customerName:snap.custName||'—', total:totals.grand, status:'unpaid', snapshot:snap});
+    invoiceHistory.unshift({id:'inv'+historyCounter+'_'+Date.now(), number:snap.invoiceNumber, docType:snap.docType, shopId:snap.shopId, shopName:shop.name, date:snap.invoiceDate, customerName:snap.custName||'—', total:totals.grand, status:'unpaid', snapshot:snap});
   }
   renderHistoryList();
 
-  settings.nextNumber = (parseInt(document.getElementById('invoiceNumber').value)||settings.nextNumber) + 1;
-  document.getElementById('setNextNumber').value = settings.nextNumber;
+  shop.nextNumber = (parseInt(document.getElementById('invoiceNumber').value)||shop.nextNumber) + 1;
+  if(shop.id===settings.activeShopId){ document.getElementById('setNextNumber').value = shop.nextNumber; }
   scheduleSave();
   renderPreview();
 });
@@ -1530,7 +1631,7 @@ document.getElementById('clearBtn').addEventListener('click', ()=>{
   confirmed=false;
   document.getElementById('pStamp').classList.remove('show');
   document.getElementById('invoiceDate').value = todayJalaliStr();
-  document.getElementById('invoiceNumber').value = settings.nextNumber;
+  document.getElementById('invoiceNumber').value = getActiveShop().nextNumber;
   docType='proforma';
   btnProforma.classList.add('active'); btnInvoice.classList.remove('active');
   renderPreview();
@@ -1649,113 +1750,53 @@ fabToggle.addEventListener('click', ()=>{
   fabToggle.classList.toggle('open');
 });
 
-/* ============================ JSON database ============================ */
-function updateDbStatus(text){ document.getElementById('dbStatus').textContent = 'وضعیت: '+text; }
-
+/* ============================ cloud database (jsonbin.io only) ============================ */
 function scheduleSave(){
   clearTimeout(saveTimer);
-  saveTimer=setTimeout(()=>{ writeDatabase(); }, 500);
+  saveTimer=setTimeout(()=>{ jsonbinPush(); }, 600);
 }
-
-async function writeDatabase(){
-  const payload = JSON.stringify({settings, history:invoiceHistory}, null, 2);
-  if(dbFileHandle){
-    try{
-      const writable=await dbFileHandle.createWritable();
-      await writable.write(payload);
-      await writable.close();
-      updateDbStatus('متصل ✅ — آخرین تغییرات ذخیره شد');
-    }catch(e){
-      console.error(e);
-      updateDbStatus('خطا در ذخیره‌سازی خودکار');
-    }
-  }
-  jsonbinAutoPush();
-}
-
-async function connectDbFile(){
-  if(!window.showSaveFilePicker){
-    showToast('مرورگر شما از اتصال زنده به فایل پشتیبانی نمی‌کند؛ از دانلود و بارگذاری دستی استفاده کنید');
-    return;
-  }
-  try{
-    const handle=await window.showSaveFilePicker({
-      suggestedName:'invoice-database.json',
-      types:[{description:'JSON Database', accept:{'application/json':['.json']}}]
-    });
-    dbFileHandle=handle;
-    try{
-      const file=await handle.getFile();
-      const text=await file.text();
-      if(text && text.trim()){
-        const obj=JSON.parse(text);
-        if(obj && (obj.settings || obj.history)){
-          if(confirm('این فایل شامل اطلاعات قبلی است. آیا بارگذاری شود؟')){
-            loadStateFromObject(obj);
-          }
-        }
-      }
-    }catch(e){ /* empty or new file, ignore */ }
-    updateDbStatus('متصل ✅ (ذخیره خودکار فعال است)');
-    scheduleSave();
-    showToast('به فایل دیتابیس متصل شدید');
-  }catch(e){
-    if(e && e.name!=='AbortError') showToast('اتصال به فایل ناموفق بود');
-  }
-}
-document.getElementById('connectDbBtn').addEventListener('click', connectDbFile);
-
-function exportDbManual(){
-  const data=JSON.stringify({settings, history:invoiceHistory}, null, 2);
-  const blob=new Blob([data], {type:'application/json'});
-  const link=document.createElement('a');
-  link.href=URL.createObjectURL(blob);
-  link.download='invoice-database.json';
-  link.click();
-  showToast('فایل دیتابیس دانلود شد');
-}
-document.getElementById('exportDbBtn').addEventListener('click', exportDbManual);
-
-document.getElementById('importDbBtnTrigger').addEventListener('click', ()=>document.getElementById('dbImportInput').click());
-document.getElementById('dbImportInput').addEventListener('change', e=>{
-  const file=e.target.files[0]; if(!file) return;
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    try{
-      const obj=JSON.parse(ev.target.result);
-      loadStateFromObject(obj);
-      showToast('اطلاعات با موفقیت بارگذاری شد');
-    }catch(err){ showToast('فایل نامعتبر است'); }
-  };
-  reader.readAsText(file);
-  e.target.value='';
-});
 
 function loadStateFromObject(obj){
   if(obj.settings){ Object.assign(settings, obj.settings); }
   invoiceHistory = obj.history || [];
+  itemCatalog = obj.itemCatalog || [];
   updateStampRatio(()=>{ refreshAllUI(); });
+  renderItemCatalogList();
 }
 
-/* ============================ jsonbin.io cloud sync ============================ */
-// window.JSONBIN_CONFIG comes from jsonbin-config.js (loaded above, may be absent).
+/* ============================ jsonbin.io cloud sync — the only persistence mechanism ============================ */
+// window.JSONBIN_CONFIG comes from jsonbin-config.js, which must sit next to this HTML file
+// and load before this script. If that file is missing or the key is still the placeholder,
+// jsonbinConfigured() returns false and every save/load attempt reports a clear error.
 const JB = (window.JSONBIN_CONFIG && window.JSONBIN_CONFIG.apiKey) ? window.JSONBIN_CONFIG : null;
 if(JB && !JB.baseUrl) JB.baseUrl = 'https://api.jsonbin.io/v3';
-let jsonbinBusy = false;
 
-function updateJsonbinStatus(text){
-  const el=document.getElementById('jsonbinStatus');
-  if(el) el.textContent = '☁️ jsonbin.io: '+text;
+function jsonbinConfigured(){
+  return !!(JB && JB.apiKey && JB.apiKey.indexOf('PASTE_YOUR')===-1);
 }
 
-function jsonbinConfigured(){ return !!(JB && JB.apiKey); }
+// Turns a failed fetch/response into a specific, actionable Persian message instead of a
+// generic "خطا" — this is what makes "چرا وصل نمی‌شود" debuggable from the toast alone.
+async function jsonbinErrorMessage(e, res){
+  if(res){
+    let extra='';
+    try{ const j=await res.clone().json(); if(j && j.message) extra=' — '+j.message; }catch(_e){}
+    if(res.status===401 || res.status===403) return 'کلید API نامعتبر است. مقدار apiKey را در jsonbin-config.js بررسی کنید'+extra;
+    if(res.status===404) return 'شناسه Bin پیدا نشد. مقدار binId را در jsonbin-config.js بررسی کنید'+extra;
+    return 'خطای سرور jsonbin.io (کد '+res.status+')'+extra;
+  }
+  if(e instanceof TypeError){
+    return 'اتصال به jsonbin.io برقرار نشد. اگر این فایل را با دابل‌کلیک باز کرده‌اید (آدرس مرورگر با file:// شروع می‌شود)، مرورگرها این نوع درخواست اینترنتی را مسدود می‌کنند — فایل را از طریق یک سرور محلی یا میزبان اینترنتی باز کنید، یا اتصال اینترنت را بررسی کنید.';
+  }
+  return (e && e.message) ? e.message : 'خطای ناشناخته';
+}
 
-async function jsonbinPush(silent){
+async function jsonbinPush(){
   if(!jsonbinConfigured()){
-    if(!silent) showToast('ابتدا فایل jsonbin-config.js را با کلید API خود تکمیل کنید');
+    showToast('❌ ذخیره نشد: فایل jsonbin-config.js را با کلید API خودتان تکمیل کنید');
     return;
   }
-  const payload = JSON.stringify({settings, history:invoiceHistory});
+  const payload = JSON.stringify({settings, history:invoiceHistory, itemCatalog});
   try{
     if(JB.binId){
       const res = await fetch(`${JB.baseUrl}/b/${JB.binId}`, {
@@ -1763,84 +1804,72 @@ async function jsonbinPush(silent){
         headers:{'Content-Type':'application/json','X-Master-Key':JB.apiKey},
         body: payload
       });
-      if(!res.ok) throw new Error('HTTP '+res.status);
-      updateJsonbinStatus('متصل ✅ — آخرین تغییرات ارسال شد ('+new Date().toLocaleTimeString('fa-IR')+')');
-      if(!silent) showToast('اطلاعات در jsonbin.io ذخیره شد');
+      if(!res.ok){ showToast('❌ ذخیره‌سازی ناموفق بود: '+await jsonbinErrorMessage(null,res)); return; }
+      showToast('✅ اطلاعات در دیتابیس ذخیره شد');
     }else{
       const res = await fetch(`${JB.baseUrl}/b`, {
         method:'POST',
-        headers:{'Content-Type':'application/json','X-Master-Key':JB.apiKey,'X-Bin-Name':'invoice-database'},
-        body: payload
+        headers:{'Content-Type':'application/json','X-Master-Key':JB.apiKey,'X-Bin-Name':'invoice-database'}
+        ,body: payload
       });
-      if(!res.ok) throw new Error('HTTP '+res.status);
+      if(!res.ok){ showToast('❌ ساخت دیتابیس ناموفق بود: '+await jsonbinErrorMessage(null,res)); return; }
       const data = await res.json();
       const newId = data && data.metadata && data.metadata.id;
       JB.binId = newId;
-      updateJsonbinStatus('یک Bin جدید ساخته شد ✅');
-      showToast('Bin جدید ساخته شد. این شناسه را در jsonbin-config.js ذخیره کنید: '+newId);
+      showToast('✅ یک دیتابیس جدید ساخته و ذخیره شد. این شناسه را در jsonbin-config.js ذخیره کنید: '+newId);
       console.log('jsonbin.io binId (save this in jsonbin-config.js):', newId);
     }
   }catch(e){
     console.error(e);
-    updateJsonbinStatus('خطا در ارتباط با سرور');
-    if(!silent) showToast('خطا در ارسال به jsonbin.io: '+e.message);
+    showToast('❌ ذخیره‌سازی ناموفق بود: '+await jsonbinErrorMessage(e));
   }
 }
 
-async function jsonbinPull(silent){
-  if(!jsonbinConfigured() || !JB.binId){
-    if(!silent) showToast('ابتدا apiKey و binId را در jsonbin-config.js تنظیم کنید');
+async function jsonbinPull(){
+  if(!jsonbinConfigured()){
+    showToast('❌ خواندن اطلاعات ناموفق بود: فایل jsonbin-config.js یافت نشد یا کلید API خالی است');
+    return;
+  }
+  if(!JB.binId){
+    showToast('هنوز دیتابیسی ساخته نشده — با اولین تغییری که ذخیره شود، یک دیتابیس جدید ساخته می‌شود');
     return;
   }
   try{
-    const res = await fetch(`${JB.baseUrl}/b/${JB.binId}/latest`, {
-      headers:{'X-Master-Key':JB.apiKey}
-    });
-    if(!res.ok) throw new Error('HTTP '+res.status);
+    const res = await fetch(`${JB.baseUrl}/b/${JB.binId}/latest`, { headers:{'X-Master-Key':JB.apiKey} });
+    if(!res.ok){ showToast('❌ خواندن اطلاعات ناموفق بود: '+await jsonbinErrorMessage(null,res)); return; }
     const data = await res.json();
     if(data && data.record){
       loadStateFromObject(data.record);
-      updateJsonbinStatus('متصل ✅ — اطلاعات دریافت شد');
-      if(!silent) showToast('اطلاعات از jsonbin.io بارگذاری شد');
+      showToast('✅ اطلاعات از دیتابیس بارگذاری شد');
+    }else{
+      showToast('❌ پاسخ دیتابیس نامعتبر بود');
     }
   }catch(e){
     console.error(e);
-    updateJsonbinStatus('خطا در دریافت اطلاعات');
-    if(!silent) showToast('خطا در دریافت از jsonbin.io: '+e.message);
+    showToast('❌ خواندن اطلاعات ناموفق بود: '+await jsonbinErrorMessage(e));
   }
 }
 
-function jsonbinAutoPush(){
-  if(!jsonbinConfigured() || jsonbinBusy) return;
-  jsonbinBusy = true;
-  jsonbinPush(true).finally(()=>{ jsonbinBusy=false; });
-}
-
-if(jsonbinConfigured()){
-  updateJsonbinStatus(JB.binId ? 'در حال اتصال...' : 'کلید API یافت شد — با اولین ذخیره، یک Bin جدید ساخته می‌شود.');
-}else{
-  updateJsonbinStatus('فایل jsonbin-config.js بارگذاری نشده یا کلید API خالی است.');
-}
-
-document.getElementById('jsonbinPushBtn').addEventListener('click', ()=>jsonbinPush(false));
-document.getElementById('jsonbinPullBtn').addEventListener('click', ()=>jsonbinPull(false));
-
 function refreshAllUI(){
+  ensureAtLeastOneShop();
+  const shop = getActiveShop();
   syncTplCardActive();
-  document.getElementById('setNextNumber').value=settings.nextNumber||1001;
-  document.getElementById('setShopName').value=settings.shopName||'';
-  document.getElementById('setShopPhone').value=settings.shopPhone||'';
-  document.getElementById('setShopEmail').value=settings.shopEmail||'';
-  document.getElementById('setShopAddress').value=settings.shopAddress||'';
-  paintUploadZone('setLogoInput','setLogoZone', settings.logo, url=>{settings.logo=url;}, ()=>{renderPreview();renderShopSummary();scheduleSave();});
-  paintUploadZone('setSignInput','setSignZone', settings.sign, url=>{settings.sign=url;}, ()=>{renderPreview();renderShopSummary();scheduleSave();});
-  paintUploadZone('setStampInput','setStampZone', settings.stamp, url=>{settings.stamp=url;}, ()=>{updateStampRatio(renderPreview);renderShopSummary();scheduleSave();});
+  renderShopTabs();
+  document.getElementById('setNextNumber').value=shop.nextNumber||1001;
+  document.getElementById('setShopName').value=shop.name||'';
+  document.getElementById('setShopPhone').value=shop.phone||'';
+  document.getElementById('setShopEmail').value=shop.email||'';
+  document.getElementById('setShopAddress').value=shop.address||'';
+  paintUploadZone('setLogoInput','setLogoZone', shop.logo, url=>{getActiveShop().logo=url;}, ()=>{renderPreview();renderShopSummary();scheduleSave();});
+  paintUploadZone('setSignInput','setSignZone', shop.sign, url=>{getActiveShop().sign=url;}, ()=>{renderPreview();renderShopSummary();scheduleSave();});
+  paintUploadZone('setStampInput','setStampZone', shop.stamp, url=>{getActiveShop().stamp=url;}, ()=>{updateStampRatio(renderPreview);renderShopSummary();scheduleSave();});
   renderPmList();
   renderShopSummary();
   renderPaymentChecklist();
+  renderItemCatalogList();
   renderHistoryList();
   const invField=document.getElementById('invoiceNumber');
-  if(!invField.value) invField.value=settings.nextNumber;
+  if(!invField.value) invField.value=shop.nextNumber;
   renderPreview();
 }
 
@@ -1849,7 +1878,7 @@ function initDefaults(){
   document.getElementById('invoiceDate').value = todayJalaliStr();
   if(itemsBody.children.length===0){ addItemRow(); }
   refreshAllUI();
-  if(jsonbinConfigured() && JB.binId){ jsonbinPull(true); }
+  jsonbinPull();
 }
 initDefaults();
 </script>
