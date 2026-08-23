@@ -840,6 +840,15 @@
 <script src="jsonbin-config.js" onerror="console.warn('jsonbin-config.js not found next to this HTML file — data cannot be saved or loaded until it is added.')"></script>
 
 <script>
+/* Global safety net: if any uncaught error breaks the app silently, surface it as a
+   toast instead of it vanishing into the browser console where most users never look. */
+window.addEventListener('error', function(e){
+  try{ showToast('⚠️ خطای برنامه: '+(e && e.message ? e.message : 'نامشخص')); }catch(_e){}
+});
+window.addEventListener('unhandledrejection', function(e){
+  try{ showToast('⚠️ خطای برنامه: '+(e && e.reason && e.reason.message ? e.reason.message : 'نامشخص')); }catch(_e){}
+});
+
 /* ============================ helpers ============================ */
 const faDigits = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
 function toFa(n){ return String(n).replace(/[0-9]/g, d => faDigits[d]); }
@@ -1874,11 +1883,21 @@ function refreshAllUI(){
 }
 
 /* ============================ init ============================ */
-function initDefaults(){
+async function initDefaults(){
   document.getElementById('invoiceDate').value = todayJalaliStr();
   if(itemsBody.children.length===0){ addItemRow(); }
-  refreshAllUI();
-  jsonbinPull();
+  try{
+    refreshAllUI();
+  }catch(e){
+    console.error('refreshAllUI failed on startup', e);
+    showToast('⚠️ خطا در آماده‌سازی صفحه: '+e.message);
+  }
+  try{
+    await jsonbinPull();
+  }catch(e){
+    console.error('jsonbinPull failed on startup', e);
+    showToast('⚠️ خطا در اتصال به دیتابیس: '+e.message);
+  }
 }
 initDefaults();
 </script>
