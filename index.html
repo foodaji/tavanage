@@ -374,8 +374,8 @@
   .pay-block .pay-line span.pay-number{letter-spacing:.5px;}
 
   .sign-block{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:150px;}
-  .sign-stage{position:relative;width:180px;height:118px;}
-  .sign-img{max-width:160px;max-height:82px;position:absolute;bottom:28px;right:8px;z-index:1;}
+  .sign-stage{position:relative;width:200px;height:136px;}
+  .sign-img{max-width:185px;max-height:92px;position:absolute;bottom:30px;right:20px;z-index:1;}
   .stamp{
     position:absolute;bottom:0;left:0;width:96px;height:96px;
     display:flex;align-items:center;justify-content:center;
@@ -522,6 +522,35 @@
 
   .confetti{position:fixed;top:0;width:8px;height:14px;z-index:70;pointer-events:none;border-radius:2px;}
 
+  /* ---------- loading overlay + save indicator ---------- */
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .app-loading-overlay{
+    position:fixed;inset:0;background:rgba(255,253,249,.97);z-index:200;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+    transition:opacity .3s ease, visibility .3s;
+  }
+  .app-loading-overlay.hidden{opacity:0;visibility:hidden;pointer-events:none;}
+  .app-loading-overlay .spinner{
+    width:44px;height:44px;border-radius:50%;
+    border:4px solid var(--line);border-top-color:var(--accent);
+    animation:spin .8s linear infinite;
+  }
+  .app-loading-overlay p{font-size:13px;color:var(--ink-soft);font-weight:700;margin:0;}
+
+  .save-indicator{
+    position:fixed;top:14px;left:14px;z-index:95;
+    display:flex;align-items:center;gap:8px;background:var(--paper);border:1px solid var(--line);
+    padding:7px 13px;border-radius:999px;box-shadow:var(--shadow);font-size:11.5px;color:var(--ink-soft);
+    opacity:0;pointer-events:none;transition:opacity .25s;font-weight:600;
+  }
+  .save-indicator.show{opacity:1;}
+  .save-indicator .spinner-sm{
+    width:13px;height:13px;border-radius:50%;flex-shrink:0;
+    border:2px solid var(--line);border-top-color:var(--accent);
+    animation:spin .7s linear infinite;
+  }
+  @media print{ .app-loading-overlay,.save-indicator{display:none !important;} }
+
   /* ---------- modals ---------- */
   .modal-overlay{
     position:fixed;inset:0;background:rgba(27,42,74,.55);z-index:90;
@@ -613,7 +642,13 @@
       <div class="accordion-body">
         <div class="row2">
           <div class="field"><label>شماره فاکتور</label><input type="text" id="invoiceNumber"></div>
-          <div class="field"><label>تاریخ صدور</label><input type="text" id="invoiceDate"></div>
+          <div class="field">
+            <label>تاریخ صدور</label>
+            <div style="display:flex;gap:6px;">
+              <input type="text" id="invoiceDate" style="flex:1;">
+              <button type="button" id="setTodayBtn" class="link-btn" style="border:1.5px solid var(--line);border-radius:10px;padding:0 12px;white-space:nowrap;text-decoration:none;">📅 امروز</button>
+            </div>
+          </div>
         </div>
         <div class="field"><label>تاریخ سررسید (اختیاری)</label><input type="text" id="dueDate" placeholder="مثلاً ۱۵ روز پس از صدور"></div>
       </div>
@@ -758,6 +793,16 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<div class="app-loading-overlay" id="appLoadingOverlay">
+  <div class="spinner"></div>
+  <p>در حال بارگذاری اطلاعات از دیتابیس...</p>
+</div>
+
+<div class="save-indicator" id="saveIndicator">
+  <span class="spinner-sm"></span>
+  <span>در حال ذخیره در دیتابیس...</span>
+</div>
 
 <!-- ============ SETTINGS MODAL ============ -->
 <div class="modal-overlay" id="settingsOverlay">
@@ -972,6 +1017,25 @@ function showToast(msg){
   el.classList.add('show');
   clearTimeout(showToast._t);
   showToast._t=setTimeout(()=>el.classList.remove('show'),3200);
+}
+
+function hideAppLoadingOverlay(){
+  const el=document.getElementById('appLoadingOverlay');
+  if(el) el.classList.add('hidden');
+}
+
+let saveIndicatorDepth=0;
+function showSaveIndicator(){
+  saveIndicatorDepth++;
+  const el=document.getElementById('saveIndicator');
+  if(el) el.classList.add('show');
+}
+function hideSaveIndicator(){
+  saveIndicatorDepth=Math.max(0, saveIndicatorDepth-1);
+  if(saveIndicatorDepth===0){
+    const el=document.getElementById('saveIndicator');
+    if(el) el.classList.remove('show');
+  }
 }
 
 function confettiBurst(){
@@ -1458,6 +1522,10 @@ discAmountBtn.addEventListener('click',()=>{ discountType='amount'; discAmountBt
 document.getElementById('taxEnabled').addEventListener('change', renderPreview);
 document.getElementById('discountValue').addEventListener('focus', function(){ this.select(); });
 document.getElementById('taxPercent').addEventListener('focus', function(){ this.select(); });
+document.getElementById('setTodayBtn').addEventListener('click', ()=>{
+  document.getElementById('invoiceDate').value = todayJalaliStr();
+  renderPreview();
+});
 
 /* ============================ render invoice preview ============================ */
 function renderPreview(){
@@ -1589,6 +1657,20 @@ function collectCurrentSnapshot(){
   };
 }
 
+function duplicateHistoryEntry(h){
+  const clone = { snapshot: JSON.parse(JSON.stringify(h.snapshot)) };
+  const s = clone.snapshot;
+  const shop = settings.shops.find(sh=>sh.id===s.shopId) || getActiveShop();
+  // Assign a fresh identity so confirming this saves a brand-new history entry
+  // instead of overwriting the original invoice it was copied from.
+  s.invoiceNumber = String(shop.nextNumber || 1001);
+  s.invoiceDate = todayJalaliStr();
+  s.dueDate = '';
+  loadSnapshotIntoForm(clone);
+  closeHistory();
+  showToast('یک فاکتور مشابه با شماره و تاریخ جدید آماده شد — تغییرات را بدهید و تایید کنید');
+}
+
 function loadSnapshotIntoForm(h){
   const s=h.snapshot;
   docType=s.docType;
@@ -1654,6 +1736,7 @@ function renderHistoryList(){
         <span class="status-pill ${statusClass}">${statusText}</span>
         <div class="history-actions">
           <button class="link-btn hv-btn" data-act="view">✏️ ویرایش</button>
+          <button class="link-btn hv-btn" data-act="duplicate">🧾 ایجاد مشابه</button>
           <button class="link-btn hv-btn" data-act="toggle">${h.status==='settled'?'لغو تسویه':'تایید تسویه'}</button>
           <button class="link-btn hv-btn" data-act="delete" style="color:var(--anar);">حذف</button>
         </div>
@@ -1663,6 +1746,7 @@ function renderHistoryList(){
       btn.addEventListener('click', ()=>{
         const act=btn.dataset.act;
         if(act==='view'){ loadSnapshotIntoForm(h); closeHistory(); }
+        else if(act==='duplicate'){ duplicateHistoryEntry(h); }
         else if(act==='toggle'){ h.status = h.status==='settled' ? 'unpaid':'settled'; renderHistoryList(); scheduleSave(); }
         else if(act==='delete'){ if(confirm('حذف این سند از سوابق؟')){ invoiceHistory=invoiceHistory.filter(x=>x.id!==h.id); renderHistoryList(); scheduleSave(); } }
       });
@@ -1934,6 +2018,7 @@ async function jsonbinPush(){
     showToast('❌ ذخیره نشد: فایل jsonbin-config.js را با کلید API خودتان تکمیل کنید');
     return;
   }
+  showSaveIndicator();
   const payload = JSON.stringify({settings, history:invoiceHistory, itemCatalog});
   try{
     if(JB.binId){
@@ -1960,6 +2045,8 @@ async function jsonbinPush(){
   }catch(e){
     console.error(e);
     showToast('❌ ذخیره‌سازی ناموفق بود: '+await jsonbinErrorMessage(e));
+  }finally{
+    hideSaveIndicator();
   }
 }
 
@@ -2026,6 +2113,8 @@ async function initDefaults(){
   }catch(e){
     console.error('jsonbinPull failed on startup', e);
     showToast('⚠️ خطا در اتصال به دیتابیس: '+e.message);
+  }finally{
+    hideAppLoadingOverlay();
   }
 }
 initDefaults();
