@@ -549,7 +549,21 @@
     border:2px solid var(--line);border-top-color:var(--accent);
     animation:spin .7s linear infinite;
   }
-  @media print{ .app-loading-overlay,.save-indicator{display:none !important;} }
+
+  .db-status-banner{
+    position:fixed;bottom:0;left:0;right:0;z-index:96;
+    display:none;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;
+    background:var(--anar);color:#fff;padding:10px 16px;font-size:12.5px;font-weight:700;
+    box-shadow:0 -4px 14px rgba(0,0,0,.15);
+  }
+  .db-status-banner.show{display:flex;}
+  .db-status-banner button{
+    border:1.5px solid rgba(255,255,255,.7);background:rgba(255,255,255,.12);color:#fff;
+    padding:6px 14px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;
+  }
+  .db-status-banner button:hover{background:rgba(255,255,255,.25);}
+
+  @media print{ .app-loading-overlay,.save-indicator,.db-status-banner{display:none !important;} }
 
   /* ---------- modals ---------- */
   .modal-overlay{
@@ -801,7 +815,12 @@
 
 <div class="save-indicator" id="saveIndicator">
   <span class="spinner-sm"></span>
-  <span>در حال ذخیره در دیتابیس...</span>
+  <span id="saveIndicatorText">در حال ذخیره در دیتابیس...</span>
+</div>
+
+<div class="db-status-banner" id="dbStatusBanner">
+  <span>⚠️ <span id="dbStatusBannerText">اتصال به دیتابیس برقرار نشد</span></span>
+  <button type="button" id="dbRetryBtn">🔁 تلاش دوباره</button>
 </div>
 
 <!-- ============ SETTINGS MODAL ============ -->
@@ -1025,10 +1044,14 @@ function hideAppLoadingOverlay(){
 }
 
 let saveIndicatorDepth=0;
-function showSaveIndicator(){
+function showSaveIndicator(text){
   saveIndicatorDepth++;
   const el=document.getElementById('saveIndicator');
-  if(el) el.classList.add('show');
+  if(el){ el.classList.add('show'); setSaveIndicatorText(text||'در حال ذخیره در دیتابیس...'); }
+}
+function setSaveIndicatorText(text){
+  const el=document.getElementById('saveIndicatorText');
+  if(el) el.textContent=text;
 }
 function hideSaveIndicator(){
   saveIndicatorDepth=Math.max(0, saveIndicatorDepth-1);
@@ -1036,6 +1059,60 @@ function hideSaveIndicator(){
     const el=document.getElementById('saveIndicator');
     if(el) el.classList.remove('show');
   }
+}
+
+function showDbBanner(show, message){
+  const el=document.getElementById('dbStatusBanner');
+  if(!el) return;
+  if(show){
+    document.getElementById('dbStatusBannerText').textContent = message || 'اتصال به دیتابیس برقرار نشد';
+    el.classList.add('show');
+  }else{
+    el.classList.remove('show');
+  }
+}
+
+function sleep(ms){ return new Promise(resolve=>setTimeout(resolve, ms)); }
+
+// Retries transient failures (network blips, timeouts, 5xx/429 server errors) with
+// exponential backoff — built for flaky/slow connections. Does NOT retry on errors that
+// a retry can't fix (401/403/404/other 4xx), so those still fail fast with a clear reason.
+async function fetchWithRetry(url, options, cfg){
+  cfg = cfg || {};
+  const maxAttempts = cfg.maxAttempts || 6;
+  const timeoutMs = cfg.timeoutMs || 25000;
+  let lastErr;
+  let sawSlowFailure=false, sawFastFailure=false;
+  for(let attempt=1; attempt<=maxAttempts; attempt++){
+    const controller = new AbortController();
+    const startedAt = Date.now();
+    const timer = setTimeout(()=>controller.abort(), timeoutMs);
+    try{
+      const res = await fetch(url, Object.assign({}, options, {signal: controller.signal}));
+      clearTimeout(timer);
+      const retryableStatus = res.status===429 || res.status>=500;
+      if(!res.ok && retryableStatus && attempt<maxAttempts){
+        if(cfg.onRetry) cfg.onRetry(attempt+1, maxAttempts);
+        await sleep(Math.min(1200*Math.pow(1.8, attempt-1), 12000));
+        continue;
+      }
+      return res;
+    }catch(e){
+      clearTimeout(timer);
+      lastErr = e;
+      // A failure within ~1.5s (well before the timeout fires) usually means the connection
+      // was refused/reset immediately — a strong sign of network-level blocking of this exact
+      // address, rather than a slow/congested link (which would fail near the timeout instead).
+      if(Date.now()-startedAt < 1500) sawFastFailure=true; else sawSlowFailure=true;
+      if(attempt<maxAttempts){
+        if(cfg.onRetry) cfg.onRetry(attempt+1, maxAttempts);
+        await sleep(Math.min(1200*Math.pow(1.8, attempt-1), 12000));
+        continue;
+      }
+    }
+  }
+  if(lastErr){ lastErr._fastFailure = sawFastFailure && !sawSlowFailure; }
+  throw lastErr || new Error('اتصال ناموفق بود');
 }
 
 function confettiBurst(){
@@ -1918,6 +1995,8 @@ fabToggle.addEventListener('click', ()=>{
   fabToggle.classList.toggle('open');
 });
 
+document.getElementById('dbRetryBtn').addEventListener('click', ()=>{ jsonbinPull(); });
+
 /* ============================ cloud database (jsonbin.io only) ============================ */
 function scheduleSave(){
   clearTimeout(saveTimer);
@@ -2007,49 +2086,75 @@ async function jsonbinErrorMessage(e, res){
     if(res.status===404) return 'شناسه Bin پیدا نشد. مقدار binId را در jsonbin-config.js بررسی کنید'+extra;
     return 'خطای سرور jsonbin.io (کد '+res.status+')'+extra;
   }
+  if(e && e.name==='AbortError'){
+    return 'اتصال به‌قدری کند بود که پاسخی در زمان مناسب نرسید و چند بار هم دوباره تلاش شد اما نتیجه نداد. لطفاً اتصال اینترنت را بررسی کنید یا کمی بعد دوباره امتحان کنید.';
+  }
   if(e instanceof TypeError){
-    return 'اتصال به jsonbin.io برقرار نشد. اگر این فایل را با دابل‌کلیک باز کرده‌اید (آدرس مرورگر با file:// شروع می‌شود)، مرورگرها این نوع درخواست اینترنتی را مسدود می‌کنند — فایل را از طریق یک سرور محلی یا میزبان اینترنتی باز کنید، یا اتصال اینترنت را بررسی کنید.';
+    if(e._fastFailure){
+      return 'اتصال به آدرس api.jsonbin.io بارها بلافاصله (نه با تأخیر) قطع شد — این معمولاً یعنی این آدرس خاص (نه کل سایت jsonbin.io) توسط شبکه یا فیلترینگ مسدود یا محدود شده است، حتی اگر خود سایت jsonbin.io در مرورگر باز شود. برای اطمینان، آدرس https://api.jsonbin.io را مستقیم در نوار آدرس مرورگر باز کنید؛ اگر آن هم باز نشد یا خیلی کند بود، مشکل از شبکه/فیلترینگ است نه این برنامه، و نیاز به تغییر DNS یا استفاده از VPN دارید.';
+    }
+    return 'اتصال به jsonbin.io برقرار نشد (بعد از چند بار تلاش مجدد). اگر این فایل را با دابل‌کلیک باز کرده‌اید (آدرس مرورگر با file:// شروع می‌شود)، مرورگرها این نوع درخواست اینترنتی را مسدود می‌کنند — فایل را از طریق یک سرور محلی یا میزبان اینترنتی باز کنید، یا اتصال اینترنت را بررسی کنید.';
   }
   return (e && e.message) ? e.message : 'خطای ناشناخته';
 }
 
+let pushInFlight=false, pushQueued=false;
 async function jsonbinPush(){
   if(!jsonbinConfigured()){
     showToast('❌ ذخیره نشد: فایل jsonbin-config.js را با کلید API خودتان تکمیل کنید');
     return;
   }
-  showSaveIndicator();
+  if(pushInFlight){ pushQueued=true; return; }
+  pushInFlight=true;
+  showSaveIndicator('در حال ذخیره در دیتابیس...');
+  const onRetry=(attempt,max)=>setSaveIndicatorText('تلاش مجدد برای ذخیره ('+toFa(attempt)+' از '+toFa(max)+')...');
   const payload = JSON.stringify({settings, history:invoiceHistory, itemCatalog});
   try{
     if(JB.binId){
-      const res = await fetch(`${JB.baseUrl}/b/${JB.binId}`, {
+      const res = await fetchWithRetry(`${JB.baseUrl}/b/${JB.binId}`, {
         method:'PUT',
         headers:{'Content-Type':'application/json','X-Master-Key':JB.apiKey},
         body: payload
-      });
-      if(!res.ok){ showToast('❌ ذخیره‌سازی ناموفق بود: '+await jsonbinErrorMessage(null,res)); return; }
+      }, {onRetry});
+      if(!res.ok){ showToast('❌ ذخیره‌سازی ناموفق بود: '+await jsonbinErrorMessage(null,res)); lastSaveFailed=true; return; }
       showToast('✅ اطلاعات در دیتابیس ذخیره شد');
+      lastSaveFailed=false;
     }else{
-      const res = await fetch(`${JB.baseUrl}/b`, {
+      const res = await fetchWithRetry(`${JB.baseUrl}/b`, {
         method:'POST',
         headers:{'Content-Type':'application/json','X-Master-Key':JB.apiKey,'X-Bin-Name':'invoice-database'}
         ,body: payload
-      });
-      if(!res.ok){ showToast('❌ ساخت دیتابیس ناموفق بود: '+await jsonbinErrorMessage(null,res)); return; }
+      }, {onRetry});
+      if(!res.ok){ showToast('❌ ساخت دیتابیس ناموفق بود: '+await jsonbinErrorMessage(null,res)); lastSaveFailed=true; return; }
       const data = await res.json();
       const newId = data && data.metadata && data.metadata.id;
       JB.binId = newId;
       showToast('✅ یک دیتابیس جدید ساخته و ذخیره شد. این شناسه را در jsonbin-config.js ذخیره کنید: '+newId);
       console.log('jsonbin.io binId (save this in jsonbin-config.js):', newId);
+      lastSaveFailed=false;
     }
   }catch(e){
     console.error(e);
-    showToast('❌ ذخیره‌سازی ناموفق بود: '+await jsonbinErrorMessage(e));
+    showToast('❌ ذخیره‌سازی ناموفق بود (بعد از چند تلاش): '+await jsonbinErrorMessage(e));
+    lastSaveFailed=true;
   }finally{
     hideSaveIndicator();
+    pushInFlight=false;
+    if(pushQueued){ pushQueued=false; jsonbinPush(); }
   }
 }
 
+// Self-healing background retry: if a save failed (likely a temporary connectivity issue),
+// keep quietly retrying every ~25s until it succeeds, instead of leaving the change stuck
+// unsaved until the user happens to edit something else.
+let lastSaveFailed=false;
+setInterval(()=>{
+  if(lastSaveFailed && !pushInFlight && jsonbinConfigured()){
+    jsonbinPush();
+  }
+}, 25000);
+
+let pullInFlight=false;
 async function jsonbinPull(){
   if(!jsonbinConfigured()){
     showToast('❌ خواندن اطلاعات ناموفق بود: فایل jsonbin-config.js یافت نشد یا کلید API خالی است');
@@ -2059,19 +2164,35 @@ async function jsonbinPull(){
     showToast('هنوز دیتابیسی ساخته نشده — با اولین تغییری که ذخیره شود، یک دیتابیس جدید ساخته می‌شود');
     return;
   }
+  if(pullInFlight) return;
+  pullInFlight=true;
+  showSaveIndicator('در حال بارگذاری اطلاعات...');
+  const onRetry=(attempt,max)=>setSaveIndicatorText('تلاش مجدد برای اتصال ('+toFa(attempt)+' از '+toFa(max)+')...');
   try{
-    const res = await fetch(`${JB.baseUrl}/b/${JB.binId}/latest`, { headers:{'X-Master-Key':JB.apiKey} });
-    if(!res.ok){ showToast('❌ خواندن اطلاعات ناموفق بود: '+await jsonbinErrorMessage(null,res)); return; }
+    const res = await fetchWithRetry(`${JB.baseUrl}/b/${JB.binId}/latest`, { headers:{'X-Master-Key':JB.apiKey} }, {onRetry});
+    if(!res.ok){
+      const msg = await jsonbinErrorMessage(null,res);
+      showToast('❌ خواندن اطلاعات ناموفق بود: '+msg);
+      showDbBanner(true, 'بارگذاری اطلاعات ناموفق بود: '+msg);
+      return;
+    }
     const data = await res.json();
     if(data && data.record){
       loadStateFromObject(data.record);
       showToast('✅ اطلاعات از دیتابیس بارگذاری شد');
+      showDbBanner(false);
     }else{
       showToast('❌ پاسخ دیتابیس نامعتبر بود');
+      showDbBanner(true, 'پاسخ دیتابیس نامعتبر بود');
     }
   }catch(e){
     console.error(e);
-    showToast('❌ خواندن اطلاعات ناموفق بود: '+await jsonbinErrorMessage(e));
+    const msg = await jsonbinErrorMessage(e);
+    showToast('❌ خواندن اطلاعات ناموفق بود (بعد از چند تلاش): '+msg);
+    showDbBanner(true, 'بارگذاری اطلاعات ناموفق بود: '+msg);
+  }finally{
+    hideSaveIndicator();
+    pullInFlight=false;
   }
 }
 
