@@ -260,6 +260,11 @@
   .tpl-swatch-elegant{background:#fff;border-top:1.5px solid var(--zafaran);border-bottom:1.5px solid var(--zafaran);}
   .tpl-swatch-corporate{background:linear-gradient(180deg,var(--ink) 0 40%, #fff 40%);border-radius:2px;}
   .tpl-swatch-receipt{background:repeating-linear-gradient(180deg,#fff 0 6px,var(--line) 6px 8px);border:1px dashed var(--ink);}
+  .tpl-swatch-electric{background:#fff;position:relative;overflow:hidden;}
+  .tpl-swatch-electric::before{content:'';position:absolute;top:0;left:0;right:0;height:9px;background:repeating-linear-gradient(135deg,#FFC107 0 6px,#1a1a1a 6px 12px);}
+  .tpl-swatch-electric2{background:#1a1a1a;position:relative;overflow:hidden;}
+  .tpl-swatch-electric2::before{content:'';position:absolute;top:0;left:0;right:0;height:8px;background:repeating-linear-gradient(135deg,#FFC107 0 6px,#1a1a1a 6px 12px);}
+  .tpl-swatch-electric2::after{content:'';position:absolute;bottom:0;left:0;right:0;height:8px;background:repeating-linear-gradient(135deg,#FFC107 0 6px,#1a1a1a 6px 12px);}
 
   /* ---------- shop tabs ---------- */
   .shop-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
@@ -475,6 +480,36 @@
   #invoice-preview.tpl-receipt table.inv-items tbody tr:nth-child(even){background:transparent;}
   #invoice-preview.tpl-receipt table.inv-items tbody td{font-variant-numeric:tabular-nums;}
   #invoice-preview.tpl-receipt .totals-line.grand{background:none;color:var(--ink);border-top:1px dashed var(--ink);border-bottom:1px dashed var(--ink);border-radius:0;}
+
+  #invoice-preview.tpl-electric{border-top:none;position:relative;padding-top:32px;}
+  #invoice-preview.tpl-electric::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:9px;
+    background:repeating-linear-gradient(135deg,#FFC107 0 14px,#1a1a1a 14px 28px);
+  }
+  #invoice-preview.tpl-electric .badge::before{content:'⚡ ';}
+  #invoice-preview.tpl-electric .badge{background:#1a1a1a;color:#FFC107;box-shadow:none;}
+  #invoice-preview.tpl-electric table.inv-items thead th{background:#1a1a1a;color:#FFC107;}
+  #invoice-preview.tpl-electric .totals-line.grand{background:#1a1a1a;color:#FFC107;}
+  #invoice-preview.tpl-electric .items-card{border-color:#1a1a1a;}
+  #invoice-preview.tpl-electric .logo-box{border-color:#1a1a1a;}
+
+  #invoice-preview.tpl-electric2{border:none;position:relative;padding-top:32px;padding-bottom:32px;}
+  #invoice-preview.tpl-electric2::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:14px;
+    background:repeating-linear-gradient(135deg,#FFC107 0 16px,#1a1a1a 16px 32px);
+  }
+  #invoice-preview.tpl-electric2::after{
+    content:'';position:absolute;bottom:0;left:0;right:0;height:10px;
+    background:repeating-linear-gradient(135deg,#FFC107 0 14px,#1a1a1a 14px 28px);
+  }
+  #invoice-preview.tpl-electric2 .badge::before{content:'⚡ ';}
+  #invoice-preview.tpl-electric2 .badge{background:#1a1a1a;color:#FFC107;border-radius:4px;box-shadow:none;animation:none;}
+  #invoice-preview.tpl-electric2 table.inv-items thead th{background:#1a1a1a;color:#FFC107;}
+  #invoice-preview.tpl-electric2 .totals-line.grand{background:#1a1a1a;color:#FFC107;border-radius:4px;}
+  #invoice-preview.tpl-electric2 .items-card{border-color:#1a1a1a;box-shadow:none;border-radius:4px;}
+  #invoice-preview.tpl-electric2 .cust-block{border-color:#1a1a1a;border-style:solid;border-radius:4px;}
+  #invoice-preview.tpl-electric2 .inv-meta-row{border-radius:4px;}
+  #invoice-preview.tpl-electric2 .logo-box{border-radius:4px;border-color:#1a1a1a;}
 
   /* ---------- action bar (desktop) ---------- */
   .action-bar{
@@ -844,6 +879,8 @@
             <button class="tpl-card" data-tpl="elegant"><span class="tpl-swatch tpl-swatch-elegant"></span>شیک و طلایی</button>
             <button class="tpl-card" data-tpl="corporate"><span class="tpl-swatch tpl-swatch-corporate"></span>شرکتی</button>
             <button class="tpl-card" data-tpl="receipt"><span class="tpl-swatch tpl-swatch-receipt"></span>رسید فشرده</button>
+            <button class="tpl-card" data-tpl="electric"><span class="tpl-swatch tpl-swatch-electric"></span>برقی ساده</button>
+            <button class="tpl-card" data-tpl="electric2"><span class="tpl-swatch tpl-swatch-electric2"></span>برقی راه‌راه</button>
           </div>
           <div class="hint">قالب انتخابی روی پیش‌نمایش، پرینت، PDF و خروجی تصویر فاکتور اعمال می‌شود.</div>
         </div>
